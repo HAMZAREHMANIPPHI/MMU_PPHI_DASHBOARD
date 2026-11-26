@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPHI Sindh - Complain & Grievance Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        pphi: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#0B5B3B', // Official PPHI Sindh Emerald Green
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .module-card { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        .module-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.15); }
+    </style>
+</head>
+<body class="font-sans antialiased text-slate-800 bg-slate-100 min-h-screen flex flex-col">
+
+    <!-- HEADER TOP BAR -->
+   <header class="bg-pphi-900 text-white sticky top-0 z-40 shadow-md">
+  <div class="px-4 sm:px-6 py-2.5 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <button onclick="toggleSidebar()" class="p-2 rounded-lg text-emerald-200 hover:text-white hover:bg-pphi-800 focus:outline-none transition md:hidden"><i class="fa-solid fa-bars text-lg"></i></button>
+      <a href="index.html" class="flex items-center space-x-3 cursor-pointer">
+       <div class="w-9 h-9 rounded-full bg-white p-1 flex items-center justify-center shadow-md overflow-hidden">
+  <img src="logo.png" alt="PPHI Sindh Logo" class="w-full h-full object-contain" />
+</div>
+        <div>
+          <h1 class="font-extrabold text-base tracking-tight text-white leading-none">PPHI SINDH</h1>
+          <span class="text-[10px] text-emerald-200 uppercase tracking-widest font-semibold">Primary Healthcare </span>
+        </div>
+      </a>
+    </div>
+    <div class="hidden md:flex items-center flex-1 max-w-sm mx-6">
+      <div class="relative w-full">
+        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-emerald-300"><i class="fa-solid fa-magnifying-glass text-xs"></i></span>
+        <input type="text" placeholder="Search facilities, district, staff..." class="w-full pl-9 pr-4 py-1.5 rounded-xl bg-pphi-800 text-xs text-white placeholder-emerald-300/70 focus:outline-none focus:ring-2 focus:ring-emerald-400 border border-pphi-700">
+      </div>
+    </div>
+    <div class="flex items-center space-x-3">
+      <a href="contestation.html" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow"><i class="fa-solid fa-file-signature"></i><span>Compliance Desk</span></a>
+      <div class="relative">
+        <button onclick="showToast('No new notifications')" class="p-2 text-emerald-200 hover:text-white rounded-xl hover:bg-pphi-800 transition">
+          <i class="fa-regular fa-bell text-base"></i>
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
+        </button>
+      </div>
+      <div class="flex items-center space-x-2 border-l border-pphi-800 pl-3">
+        <div class="w-8 h-8 rounded-full bg-emerald-300 text-pphi-900 font-extrabold flex items-center justify-center text-xs shadow-sm">HR</div>
+        <span class="hidden lg:inline-block text-xs font-bold text-white">Hamza Rehmani</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+    <!-- MAIN BODY CONTAINER -->
+    <div class="flex-1 flex overflow-hidden">
+
+        <!-- LEFT SIDEBAR NAVIGATION (CONTESTATION -> COMPLAIN -> DATA UPLOAD) -->
+       <aside id="sidebar" class="w-56 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 transition-all duration-300 z-30">
+    <div class="py-4 px-3 space-y-1 overflow-y-auto">
+        <a href="index.html" class="w-full flex items-center px-3 py-2.5 text-xs font-bold bg-emerald-50 text-pphi-900 border-l-4 border-pphi-900 shadow-sm rounded-xl transition">
+            <i class="fa-solid fa-table-cells-large w-6 text-center"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="HFopen.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-hospital w-6 text-center text-slate-400"></i>
+            <span>HF OPEN</span>
+        </a>
+        <a href="mowmo.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-user-doctor w-6 text-center text-slate-400"></i>
+            <span>MO/WMO</span>
+        </a>
+        <a href="labour.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-bed-pulse w-6 text-center text-slate-400"></i>
+            <span>LABOUR ROOM</span>
+        </a>
+        <a href="medicine.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-pills w-6 text-center text-slate-400"></i>
+            <span>MEDICINE</span>
+        </a>
+        <a href="ancpnc.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-stethoscope w-6 text-center text-slate-400"></i>
+            <span>ANC/PNC</span>
+        </a>
+        <a href="family.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-people-roof w-6 text-center text-slate-400"></i>
+            <span>FAMILY PLANNING</span>
+        </a>
+        <a href="tuberculosis.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-lungs w-6 text-center text-slate-400"></i>
+            <span>TUBERCULOSIS</span>
+        </a>
+        <a href="otp.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-child-reaching w-6 text-center text-slate-400"></i>
+            <span>OTP</span>
+        </a>
+        <a href="contestation.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-file-pen w-6 text-center text-slate-400"></i>
+            <span>CONTESTATION</span>
+        </a>
+        <a href="Complain.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-shield-halved w-6 text-center text-slate-400"></i>
+            <span>COMPLIANCE</span>
+        </a>
+        <a href="upload.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-cloud-arrow-up w-6 text-center text-slate-400"></i>
+            <span>DATA UPLOAD</span>
+        </a>
+    </div>
+
+    <div class="p-4 border-t border-slate-100 text-center">
+        <div class="w-12 h-12 mx-auto mb-2">
+            <svg viewBox="0 0 100 100" class="w-full h-full text-pphi-900 fill-current">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#0B5B3B" stroke-width="8"/> 
+                <path d="M50 15 A35 35 0 0 1 85 50 Z" fill="#dc2626" />
+                <path d="M50 25 A25 25 0 1 0 75 50" fill="none" stroke="#0B5B3B" stroke-width="6"/>
+                <circle cx="50" cy="50" r="10" fill="#0B5B3B"/>
+            </svg>
+        </div>
+        <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Redefining Primary Healthcare</p>
+    </div>
+</aside>
+        <!-- RIGHT WORKSPACE AREA -->
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+
+            <!-- PAGE HEADER -->
+            <div class="bg-gradient-to-r from-pphi-900 to-emerald-700 rounded-2xl p-6 text-white shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    
+                    <h2 class="text-2xl sm:text-3xl font-black tracking-tight mt-1">COMPLIANCE MANAGEMENT DESK</h2>
+                    <p class="text-xs sm:text-sm font-medium text-emerald-100 mt-1">Compliance and operational</p>
+                </div>
+                <button onclick="openModal()" class="self-start sm:self-center px-4 py-2.5 bg-red-600 hover:bg-red-700 rounded-xl text-xs font-bold text-white transition flex items-center space-x-2 shadow-md">
+                    <i class="fa-solid fa-plus-circle"></i>
+                    <span>New Compliance</span>
+                </button>
+            </div>
+
+            <!-- FILTER SECTION BAR -->
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                    <div>
+                        <label class="block text-slate-400 text-[11px] font-semibold mb-1">Region</label>
+                        <select id="filterRegion" class="w-full bg-slate-100 border border-slate-200 text-slate-600 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                            <option value="All">All</option>
+                            <option value="Hyderabad">Hyderabad</option>
+                            <option value="Sukkur">Sukkur</option>
+                            <option value="Larkana">Larkana</option>
+                            <option value="Mirpurkhas">Mirpurkhas</option>
+                            <option value="Shaheed Benazirabad">Shaheed Benazirabad</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-slate-400 text-[11px] font-semibold mb-1">District</label>
+                        <select id="filterDistrict" class="w-full bg-slate-100 border border-slate-200 text-slate-600 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                            <option value="All">All</option>
+                            <option value="Badin">Badin</option>
+                            <option value="Thatta">Thatta</option>
+                            <option value="Sujawal">Sujawal</option>
+                            <option value="Dadu">Dadu</option>
+                            <option value="Khairpur">Khairpur</option>
+                            <option value="Jacobabad">Jacobabad</option>
+                        </select>
+                    </div>
+
+                   
+
+                    <div>
+                        <label class="block text-slate-400 text-[11px] font-semibold mb-1">Designation</label>
+                        <select id="filterDesignation" class="w-full bg-slate-100 border border-slate-200 text-slate-600 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                            <option value="All">All</option>
+                            <option value="Medical Officer">Medical Officer (MO)</option>
+                            <option value="WMO">Woman MO (WMO)</option>
+                            <option value="Dispenser">Dispenser</option>
+                            <option value="LHV">LHV</option>
+                            <option value="Store Keeper">Store Keeper</option>
+                        </select>
+                    </div>
+
+                   
+
+                    <div>
+                        <label class="block text-slate-400 text-[11px] font-semibold mb-1">From Date *</label>
+                        <input type="date" id="filterFromDate" class="w-full bg-slate-100 border border-slate-200 text-slate-600 py-1 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-slate-400 text-[11px] font-semibold mb-1">Status</label>
+                        <select id="filterStatus" class="w-full bg-slate-100 border border-slate-200 text-slate-600 py-1.5 px-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                            <option value="All">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Under Investigation">Under Investigation</option>
+                            <option value="Resolved">Resolved</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-end">
+                        <button onclick="applyFilters()" class="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition shadow text-center text-xs uppercase tracking-wider">
+                            Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUMMARY STAT CARDS -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Filed</span>
+                        <h4 id="countTotal" class="text-2xl font-black text-slate-900 mt-1">8</h4>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-list-check"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-bold text-amber-600 uppercase tracking-wider">Pending Action</span>
+                        <h4 id="countPending" class="text-2xl font-black text-amber-600 mt-1">2</h4>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-hourglass-half"></i>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Resolved</span>
+                        <h4 id="countResolved" class="text-2xl font-black text-emerald-600 mt-1">4</h4>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COMPLAINTS TABLE CONTAINER -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 overflow-hidden space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-extrabold text-slate-800 tracking-tight">Active Compliance</h3>
+                        <p class="text-xs text-slate-500">Live feed of reported issues across all PPHI Sindh healthcare facilities.</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="exportToCSV('complain-table-body')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition flex items-center space-x-1.5 border border-slate-200">
+                            <i class="fa-solid fa-file-csv text-emerald-700"></i>
+                            <span>Export CSV</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table class="w-full text-[11px] text-left border-collapse">
+                        <thead>
+                            <tr class="bg-[#0f4c47] text-white font-semibold">
+                                <th class="p-2.5 border-r border-teal-800">Ticket ID</th>
+                                <th class="p-2.5 border-r border-teal-800">Date</th>
+                                <th class="p-2.5 border-r border-teal-800">Region</th>
+                                <th class="p-2.5 border-r border-teal-800">District</th>
+                                <th class="p-2.5 border-r border-teal-800">Facility Name</th>
+                                <th class="p-2.5 border-r border-teal-800">Category</th>
+                                <th class="p-2.5 border-r border-teal-800 text-center">Urgency</th>
+                                
+                                <th class="p-2.5 border-r border-teal-800 bg-amber-300 text-slate-900 font-bold text-center">Status</th>
+                                <th class="p-2.5 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="complain-table-body" class="divide-y divide-slate-200 bg-white">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ANALYTICS CHARTS GRID -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative">
+                    <h3 class="text-base font-extrabold text-slate-800 tracking-tight">Complaints by Category</h3>
+                    <p class="text-xs text-slate-400 mb-4">Breakdown of reported field issues</p>
+                    <div class="h-64 relative"><canvas id="categoryChart"></canvas></div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative">
+                    <h3 class="text-base font-extrabold text-slate-800 tracking-tight">Status Breakdown by District</h3>
+                    <p class="text-xs text-slate-400 mb-4">Proportion of resolved vs pending grievances</p>
+                    <div class="h-64 relative flex items-center justify-center"><canvas id="districtStatusChart"></canvas></div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- NEW COMPLAINT REGISTRATION MODAL -->
+    <div id="complainModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
+            <div class="bg-pphi-900 p-4 text-white flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-file-circle-plus text-emerald-300"></i>
+                    <h3 class="font-extrabold text-sm tracking-wide">REGISTER NEW COMPLAINT</h3>
+                </div>
+                <button onclick="closeModal()" class="text-emerald-200 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form onsubmit="handleFormSubmit(event)" class="p-5 space-y-3 text-xs">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Region *</label>
+                        <select id="modalRegion" required class="w-full bg-slate-100 border border-slate-200 p-2 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                            <option value="">Select Region</option>
+                            <option value="Hyderabad">Hyderabad</option>
+                            <option value="Sukkur">Sukkur</option>
+                            <option value="Larkana">Larkana</option>
+                            <option value="Mirpurkhas">Mirpurkhas</option>
+                            <option value="Shaheed Benazirabad">Shaheed Benazirabad</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">District *</label>
+                        <select id="modalDistrict" required class="w-full bg-slate-100 border border-slate-200 p-2 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                            <option value="">Select District</option>
+                            <option value="Badin">Badin</option>
+                            <option value="Thatta">Thatta</option>
+                            <option value="Sujawal">Sujawal</option>
+                            <option value="Dadu">Dadu</option>
+                            <option value="Khairpur">Khairpur</option>
+                            <option value="Jacobabad">Jacobabad</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Health Facility Name *</label>
+                    <input type="text" id="modalFacility" required placeholder="e.g. BHU Aabad Samoo" class="w-full bg-slate-100 border border-slate-200 p-2 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Category *</label>
+                        <select id="modalCategory" required class="w-full bg-slate-100 border border-slate-200 p-2 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                            <option value="Biometric Punch">HF</option>
+                            <option value="Medicine Stockout">Medicine Stockout</option>
+                            <option value="Staff Absence">EMERGENCY TRAP</option>
+                            <option value="Equipment Failure">EquipmentS</option>
+                            <option value="Facility Cleanliness">ANC</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Urgency Level *</label>
+                        <select id="modalUrgency" required class="w-full bg-slate-100 border border-slate-200 p-2 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                            <option value="High">High</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Staff Designation Involved</label>
+                    <input type="text" id="modalDesignation" placeholder="e.g. Medical Officer / Dispenser" class="w-full bg-slate-100 border border-slate-200 p-2 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Complaint Description *</label>
+                    <textarea id="modalDescription" rows="3" required placeholder="Provide clear details regarding the grievance..." class="w-full bg-slate-100 border border-slate-200 p-2 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"></textarea>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end space-x-2">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow">Submit Complaint</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl transition-all opacity-0 translate-y-10 z-50 pointer-events-none">
+        <span id="toastMsg">Action executed successfully.</span>
+    </div>
+
+    <script>
+        let complaintsData = [
+            { id: 'CMP-2024-101', date: '2026-11-02', region: 'Hyderabad', district: 'Badin', facility: 'BHU Aabad Samoo', category: 'HF', urgency: 'High',  status: 'Pending' },
+            { id: 'CMP-2024-102', date: '2026-11-01', region: 'Hyderabad', district: 'Thatta', facility: 'RHC Gharo', category: 'Medicine Stockout', urgency: 'High',  status: 'Resolved' },
+            { id: 'CMP-2024-103', date: '2026-10-28', region: 'Larkana', district: 'Dadu', facility: 'MCH Center Dadu', category: 'Emergency tay', urgency: 'Medium',  status: 'Resolved' },
+            { id: 'CMP-2024-104', date: '2026-10-25', region: 'Larkana', district: 'Dadu', facility: 'BHU Johi', category: 'ANC', urgency: 'Low', status: 'Pending' },
+            { id: 'CMP-2024-105', date: '2026-10-22', region: 'Sukkur', district: 'Khairpur', facility: 'RHC Mirwah', category: 'Equipment', urgency: 'Medium',  status: 'Resolved' },
+            { id: 'CMP-2024-106', date: '2026-10-19', region: 'Sukkur', district: 'Jacobabad', facility: 'BHU Thul', category: 'Medicine', urgency: 'High',  status: 'pending' }
+        ];
+
+        window.toggleSidebar = function() {
+            document.getElementById('sidebar').classList.toggle('hidden');
+        };
+
+        window.showToast = function(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none');
+            }, 2500);
+        };
+
+        window.exportToCSV = function(tbodyId) {
+            showToast("Exporting complaint register to Excel format...");
+        };
+
+        function renderTable(data) {
+            const tbody = document.getElementById('complain-table-body');
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-slate-400 font-bold">No matching complaint records found.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = data.map(item => {
+                let statusBadge = '';
+                if(item.status === 'Pending') statusBadge = 'bg-amber-100 text-amber-800 border border-amber-300';
+                else if(item.status === 'Under Investigation') statusBadge = 'bg-sky-100 text-sky-800 border border-sky-300';
+                else statusBadge = 'bg-emerald-100 text-emerald-800 border border-emerald-300';
+
+                let urgencyColor = item.urgency === 'High' ? 'text-rose-600' : (item.urgency === 'Medium' ? 'text-amber-600' : 'text-slate-500');
+
+                return `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100 text-[11px]">
+                        <td class="p-2 font-mono font-bold text-pphi-900">${item.id}</td>
+                        <td class="p-2 font-medium text-slate-600">${item.date}</td>
+                        <td class="p-2 text-slate-700">${item.region}</td>
+                        <td class="p-2 font-semibold text-slate-800">${item.district}</td>
+                        <td class="p-2 font-bold text-slate-900">${item.facility}</td>
+                        <td class="p-2 text-slate-700">${item.category}</td>
+                        <td class="p-2 text-center font-bold ${urgencyColor}">${item.urgency}</td>
+                        
+                        <td class="p-2 text-center">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${statusBadge}">
+                                ${item.status}
+                            </span>
+                        </td>
+                        <td class="p-2 text-center space-x-1">
+                            <button onclick="cycleStatus('${item.id}')" title="Update Status" class="p-1 text-slate-500 hover:text-pphi-900"><i class="fa-solid fa-arrows-rotate"></i></button>
+                            <button onclick="showToast('Viewing grievance docket for ${item.id}')" title="View Case File" class="p-1 text-slate-500 hover:text-emerald-600"><i class="fa-solid fa-eye"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateSummaryCards(data) {
+            document.getElementById('countTotal').innerText = data.length;
+            document.getElementById('countPending').innerText = data.filter(d => d.status === 'Pending').length;
+            document.getElementById('countReview').innerText = data.filter(d => d.status === 'Under Investigation').length;
+            document.getElementById('countResolved').innerText = data.filter(d => d.status === 'Resolved').length;
+        }
+
+        function applyFilters() {
+            const reg = document.getElementById('filterRegion').value;
+            const dist = document.getElementById('filterDistrict').value;
+            const fac = document.getElementById('filterFacility').value;
+            const vt = document.getElementById('filterVisitType').value;
+            const status = document.getElementById('filterStatus').value;
+
+            const filtered = complaintsData.filter(item => {
+                const matchRegion = reg === 'All' || item.region === reg;
+                const matchDistrict = dist === 'All' || item.district === dist;
+                const matchFacility = fac === 'All' || item.facility === fac;
+                const matchVisitType = vt === 'All' || item.visitType === vt;
+                const matchStatus = status === 'All' || item.status === status;
+                return matchRegion && matchDistrict && matchFacility && matchVisitType && matchStatus;
+            });
+
+            renderTable(filtered);
+            updateSummaryCards(filtered);
+            showToast('Filter query applied');
+        }
+
+        function searchComplaintsTable() {
+            const q = document.getElementById('globalSearchInput').value.toLowerCase();
+            const filtered = complaintsData.filter(i => 
+                i.id.toLowerCase().includes(q) ||
+                i.facility.toLowerCase().includes(q) ||
+                i.district.toLowerCase().includes(q)
+            );
+            renderTable(filtered);
+        }
+
+        function cycleStatus(id) {
+            const record = complaintsData.find(c => c.id === id);
+            if (!record) return;
+            if (record.status === 'Pending') record.status = 'Resolved';
+            else if (record.status === 'Under Investigation') record.status = 'Resolved';
+            else record.status = 'Pending';
+
+            applyFilters();
+            showToast(`Ticket ${id} status moved to ${record.status}`);
+        }
+
+        function openModal() {
+            document.getElementById('complainModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('complainModal').classList.add('hidden');
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const region = document.getElementById('modalRegion').value;
+            const district = document.getElementById('modalDistrict').value;
+            const facility = document.getElementById('modalFacility').value;
+            const category = document.getElementById('modalCategory').value;
+            const urgency = document.getElementById('modalUrgency').value;
+
+            const newTicket = `CMP-2024-${Math.floor(100 + Math.random() * 900)}`;
+            const today = new Date().toISOString().split('T')[0];
+
+            complaintsData.unshift({
+                id: newTicket,
+                date: today,
+                region: region,
+                district: district,
+                facility: facility,
+                category: category,
+                urgency: urgency,
+                visitType: 'Surprise Visit',
+                status: 'Pending'
+            });
+
+            closeModal();
+            applyFilters();
+            showToast(`New Complaint Ticket ${newTicket} registered!`);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderTable(complaintsData);
+            updateSummaryCards(complaintsData);
+
+            // Chart 1: Category Distribution
+            new Chart(document.getElementById('categoryChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Biometric', 'Medicine Out', 'Staff Absence', 'Equipment', 'Cleanliness'],
+                    datasets: [{
+                        label: 'Reported Issues',
+                        data: [12, 9, 6, 4, 3],
+                        backgroundColor: '#059669',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Chart 2: District Breakdown
+            new Chart(document.getElementById('districtStatusChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Badin', 'Thatta', 'Dadu', 'Khairpur', 'Jacobabad'],
+                    datasets: [{
+                        data: [10, 6, 5, 4, 3],
+                        backgroundColor: ['#dc2626', '#f59e0b', '#0284c7', '#10b981', '#8b5cf6']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        });
+    </script>
+</body>
+</html>

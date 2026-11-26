@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-100">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPHI Sindh - Tuberculosis Analytics Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        pphi: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#0B5B3B', // Official PPHI Sindh Emerald Green
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .module-card {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .module-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.15);
+        }
+    </style>
+</head>
+
+<body class="font-sans antialiased text-slate-800 bg-slate-100 min-h-screen flex flex-col">
+
+    <!-- HEADER TOP BAR -->
+    <header class="bg-pphi-900 text-white sticky top-0 z-40 shadow-md">
+  <div class="px-4 sm:px-6 py-2.5 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <button onclick="toggleSidebar()" class="p-2 rounded-lg text-emerald-200 hover:text-white hover:bg-pphi-800 focus:outline-none transition md:hidden"><i class="fa-solid fa-bars text-lg"></i></button>
+      <a href="index.html" class="flex items-center space-x-3 cursor-pointer">
+       <div class="w-9 h-9 rounded-full bg-white p-1 flex items-center justify-center shadow-md overflow-hidden">
+  <img src="logo.png" alt="PPHI Sindh Logo" class="w-full h-full object-contain" />
+</div>
+        <div>
+          <h1 class="font-extrabold text-base tracking-tight text-white leading-none">PPHI SINDH</h1>
+          <span class="text-[10px] text-emerald-200 uppercase tracking-widest font-semibold">Primary Healthcare </span>
+        </div>
+      </a>
+    </div>
+    <div class="hidden md:flex items-center flex-1 max-w-sm mx-6">
+      <div class="relative w-full">
+        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-emerald-300"><i class="fa-solid fa-magnifying-glass text-xs"></i></span>
+        <input type="text" placeholder="Search facilities, district, staff..." class="w-full pl-9 pr-4 py-1.5 rounded-xl bg-pphi-800 text-xs text-white placeholder-emerald-300/70 focus:outline-none focus:ring-2 focus:ring-emerald-400 border border-pphi-700">
+      </div>
+    </div>
+    <div class="flex items-center space-x-3">
+      <a href="contestation.html" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow"><i class="fa-solid fa-file-signature"></i><span>Compliance Desk</span></a>
+      <div class="relative">
+        <button onclick="showToast('No new notifications')" class="p-2 text-emerald-200 hover:text-white rounded-xl hover:bg-pphi-800 transition">
+          <i class="fa-regular fa-bell text-base"></i>
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
+        </button>
+      </div>
+      <div class="flex items-center space-x-2 border-l border-pphi-800 pl-3">
+        <div class="w-8 h-8 rounded-full bg-emerald-300 text-pphi-900 font-extrabold flex items-center justify-center text-xs shadow-sm">HR</div>
+        <span class="hidden lg:inline-block text-xs font-bold text-white">Hamza Rehmani</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+    <!-- MAIN BODY CONTAINER -->
+    <div class="flex-1 flex overflow-hidden">
+
+        <!-- LEFT SIDEBAR NAVIGATION -->
+        <aside id="sidebar"
+            class="w-56 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 transition-all duration-300 z-30">
+            <div class="py-4 px-3 space-y-1 overflow-y-auto">
+                <a href="index.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-table-cells-large w-6 text-center"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="HFopen.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-hospital w-6 text-center text-slate-400"></i>
+                    <span>HF OPEN</span>
+                </a>
+                <a href="mowmo.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-user-doctor w-6 text-center text-slate-400"></i>
+                    <span>MO/WMO</span>
+                </a>
+                <a href="labour.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-bed-pulse w-6 text-center text-slate-400"></i>
+                    <span>LABOUR ROOM</span>
+                </a>
+                <a href="medicine.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-pills w-6 text-center text-slate-400"></i>
+                    <span>MEDICINE</span>
+                </a>
+                <a href="ancpnc.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-stethoscope w-6 text-center text-slate-400"></i>
+                    <span>ANC/PNC</span>
+                </a>
+                <a href="family.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-people-roof w-6 text-center text-slate-400"></i>
+                    <span>FAMILY PLANNING</span>
+                </a>
+                <a href="tuberculosis.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-bold bg-teal-50 text-teal-900 border-l-4 border-teal-600 shadow-sm rounded-xl transition">
+                    <i class="fa-solid fa-lungs w-6 text-center text-teal-600"></i>
+                    <span>TUBERCULOSIS</span>
+                </a>
+                <a href="otp.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-child-reaching w-6 text-center text-slate-400"></i>
+                    <span>OTP</span>
+                </a>
+                <a href="contestation.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-file-pen w-6 text-center text-slate-400"></i>
+                    <span>CONTESTATION</span>
+                </a>
+                <a href="Complain.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-shield-halved w-6 text-center text-slate-400"></i>
+                    <span>COMPLIANCE</span>
+                </a>
+                <a href="upload.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-cloud-arrow-up w-6 text-center text-slate-400"></i>
+                    <span>DATA UPLOAD</span>
+                </a>
+            </div>
+
+            <div class="p-4 border-t border-slate-100 text-center">
+                <div class="w-12 h-12 mx-auto mb-2">
+                    <svg viewBox="0 0 100 100" class="w-full h-full text-pphi-900 fill-current">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#0B5B3B" stroke-width="8" />
+                        <path d="M50 15 A35 35 0 0 1 85 50 Z" fill="#dc2626" />
+                        <path d="M50 25 A25 25 0 1 0 75 50" fill="none" stroke="#0B5B3B" stroke-width="6" />
+                        <circle cx="50" cy="50" r="10" fill="#0B5B3B" />
+                    </svg>
+                </div>
+                <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Redefining Primary
+                    Healthcare</p>
+            </div>
+        </aside>
+
+        <!-- RIGHT WORKSPACE AREA -->
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+
+            <!-- WELCOME BANNER -->
+            <div
+                class="bg-gradient-to-r from-teal-800 to-teal-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <span class="text-xs text-teal-100 font-extrabold tracking-widest uppercase">TUBERCULOSIS CONTROL
+                        ANALYTICS</span>
+                    <h2 class="text-2xl sm:text-3xl font-black tracking-tight mt-1">TB DOTS & SCREENING MONITOR</h2>
+                    <p class="text-sm sm:text-base font-semibold text-teal-50 tracking-wide">PPHI Sindh Healthcare
+                        Network</p>
+                </div>
+                <button onclick="exportToCSV()"
+                    class="self-start sm:self-center px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-xs font-bold text-white transition flex items-center space-x-2">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Export Reports</span>
+                </button>
+            </div>
+
+            <!-- MODULE CARDS -->
+           <div class="overflow-x-auto pb-3">
+    <div class="flex items-center space-x-3.5 min-w-max">
+        <!-- Health Facility (1341 / 1387 = 96.7%) -->
+        <a href="HFopen.html" class="module-card w-40 h-32 bg-rose-500 hover:bg-rose-600 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-hospital text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-rose-700/50 px-2 py-0.5 rounded-full tracking-wider">96.7%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Health Facility</span>
+                <span class="block text-[10px] font-bold text-rose-100">1,341 / 46 <span class="text-[9px] font-normal opacity-80">(Open/Cls)</span></span>
+            </div>
+            <div class="pt-1 border-t border-rose-400/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">1,387</span>
+            </div>
+        </a>
+
+        <!-- MO/WMO (532 / 648 = 82.1%) -->
+        <a href="mowmo.html" class="module-card w-40 h-32 bg-emerald-600 hover:bg-emerald-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-user-doctor text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-emerald-800/50 px-2 py-0.5 rounded-full tracking-wider">82.1%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">MO / WMO</span>
+                <span class="block text-[10px] font-bold text-emerald-100">532 / 116 <span class="text-[9px] font-normal opacity-80">(Prs/Abs)</span></span>
+            </div>
+            <div class="pt-1 border-t border-emerald-500/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">648</span>
+            </div>
+        </a>
+
+        <!-- Labour Room (463 / 673 = 68.8%) -->
+        <a href="labour.html" class="module-card w-40 h-32 bg-sky-500 hover:bg-sky-600 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-bed-pulse text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-sky-700/50 px-2 py-0.5 rounded-full tracking-wider">68.8%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Labour Room</span>
+                <span class="block text-[10px] font-bold text-sky-100">463 / 210 <span class="text-[9px] font-normal opacity-80">(Fn/Non)</span></span>
+            </div>
+            <div class="pt-1 border-t border-sky-400/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">673</span>
+            </div>
+        </a>
+
+        <!-- Medicine (1083 / 1338 = 80.9%) -->
+        <a href="medicine.html" class="module-card w-40 h-32 bg-amber-600 hover:bg-amber-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-pills text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-amber-800/50 px-2 py-0.5 rounded-full tracking-wider">80.9%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Medicine</span>
+                <span class="block text-[10px] font-bold text-amber-100">1,083 / 255 <span class="text-[9px] font-normal opacity-80">(Avl/Not)</span></span>
+            </div>
+            <div class="pt-1 border-t border-amber-500/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">1,338</span>
+            </div>
+        </a>
+
+        <!-- ANC / PNC (588 / 673 = 87.4%) -->
+        <a href="ancpnc.html" class="module-card w-40 h-32 bg-purple-600 hover:bg-purple-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-stethoscope text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-purple-800/50 px-2 py-0.5 rounded-full tracking-wider">87.4%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">ANC / PNC</span>
+                <span class="block text-[10px] font-bold text-purple-100">588 / 85 <span class="text-[9px] font-normal opacity-80">(Fn/Non)</span></span>
+            </div>
+            <div class="pt-1 border-t border-purple-500/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">673</span>
+            </div>
+        </a>
+
+        <!-- Family Planning (1116 / 1339 = 83.3%) -->
+        <a href="family.html" class="module-card w-40 h-32 bg-pink-500 hover:bg-pink-600 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-people-roof text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-pink-700/50 px-2 py-0.5 rounded-full tracking-wider">83.3%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Family Planning</span>
+                <span class="block text-[10px] font-bold text-pink-100">1,116 / 223 <span class="text-[9px] font-normal opacity-80">(Fn/Non)</span></span>
+            </div>
+            <div class="pt-1 border-t border-pink-400/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">1,339</span>
+            </div>
+        </a>
+
+        <!-- Tuberculosis (77 / 140 = 55.0%) -->
+        <a href="tuberculosis.html" class="module-card w-40 h-32 bg-teal-700 hover:bg-teal-800 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-lungs text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-teal-900/50 px-2 py-0.5 rounded-full tracking-wider">55.0%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Tuberculosis</span>
+                <span class="block text-[10px] font-bold text-teal-100">77 / 63 <span class="text-[9px] font-normal opacity-80">(Act/Inact)</span></span>
+            </div>
+            <div class="pt-1 border-t border-teal-600/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">140</span>
+            </div>
+        </a>
+
+        <!-- OTP (475 / 574 = 82.8%) -->
+        <a href="otp.html" class="module-card w-40 h-32 bg-orange-600 hover:bg-orange-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-child-reaching text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-orange-800/50 px-2 py-0.5 rounded-full tracking-wider">82.8%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">OTP</span>
+                <span class="block text-[10px] font-bold text-orange-100">475 / 99 <span class="text-[9px] font-normal opacity-80">(Fn/Non)</span></span>
+            </div>
+            <div class="pt-1 border-t border-orange-500/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">574</span>
+            </div>
+        </a>
+
+        <!-- Contestation Form Desk -->
+        <a href="contestation.html" class="module-card w-40 h-32 bg-indigo-600 hover:bg-indigo-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-file-signature text-sm"></i></div>
+                <span class="text-[9px] font-extrabold uppercase bg-indigo-800/50 px-2 py-0.5 rounded-full tracking-wider">Desk</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Contestation</span>
+                <span class="block text-[10px] font-bold text-indigo-100">Verification Hub</span>
+            </div>
+            <div class="pt-1 border-t border-indigo-500/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Access Desk</span>
+                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </div>
+        </a>
+    </div>
+</div>
+
+            <!-- MAIN CONTENT AREA -->
+            <div class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div
+                        class="bg-teal-700 rounded-2xl p-6 text-white text-center shadow-lg flex items-center justify-between">
+                        <div class="text-left">
+                            <h3 class="text-2xl font-black uppercase tracking-wider">TB DOTS Center Tracker</h3>
+                            <p class="text-xs text-teal-100 mt-1">Real-time screening & medication monitor</p>
+                        </div>
+                        <div class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center"><i
+                                class="fa-solid fa-lungs text-3xl"></i></div>
+                    </div>
+                    <div onclick="document.getElementById('tbTableSearch').focus()"
+                        class="bg-white hover:bg-slate-50 rounded-2xl p-6 text-slate-800 text-center cursor-pointer shadow-md border border-slate-200 transition-all flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-magnifying-glass text-2xl text-slate-700 mb-1"></i>
+                        <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-800">Search Records</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 overflow-hidden">
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm font-bold text-slate-700">Found Records:</span>
+                            <span id="tb-found-count"
+                                class="text-sm font-black text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">3</span>
+                        </div>
+
+                        <!-- Quick Page Selectors -->
+                        <div
+                            class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl border border-slate-200 overflow-x-auto max-w-xs">
+                            <span class="text-[11px] font-bold text-slate-500 px-2">Page:</span>
+                            <div id="quickPageButtons" class="flex items-center space-x-1"></div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-3">
+                            <div class="relative">
+                                <input type="text" id="tbTableSearch" oninput="filterTbTable()"
+                                    placeholder="Filter TB records..."
+                                    class="bg-slate-100 border border-slate-200 text-xs text-slate-600 rounded-xl pl-8 pr-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-teal-500 w-48">
+                                <i
+                                    class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-xs text-slate-400"></i>
+                            </div>
+                            <button onclick="exportToCSV()"
+                                class="px-4 py-1.5 border border-sky-400 text-sky-600 hover:bg-sky-50 rounded-xl text-xs font-bold transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-download text-xs"></i><span>Export to Excel</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="tableScrollContainer"
+                        class="overflow-x-auto border border-slate-200 rounded-xl max-h-[500px]">
+                        <table class="w-full text-[11px] text-left border-collapse whitespace-nowrap">
+                            <thead class="sticky top-0 z-10">
+                                <tr class="bg-[#0f4c47] text-white font-semibold">
+                                    <th class="p-2.5 border-r border-teal-800">Facility Code</th>
+                                    <th class="p-2.5 border-r border-teal-800">Region</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center">District</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center">Facility Name</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center">W.Status</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center">Transitioned</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center">Visit date & time</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center bg-teal-800">TB DOTS Corner
+                                        Established</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center bg-teal-800">Sputum Collection
+                                        Cups</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center bg-teal-800">Anti-TB Drugs
+                                        (Category-I)</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center bg-teal-800">Anti-TB Drugs
+                                        (Pediatric)</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center bg-teal-800">TB Treatment
+                                        Register Maintained</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center bg-amber-700">Reason /
+                                        Contestation</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-table-body" class="divide-y divide-slate-200 bg-white"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination Footer Navigation -->
+                    <div class="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 text-xs">
+                        <span id="pageInfoText" class="font-medium text-slate-500">Showing records 1 - 3</span>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="changePage(-1)"
+                                class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition">Previous</button>
+                            <span id="pageIndicator" class="px-3 py-1.5 font-bold text-slate-700">1 / 1</span>
+                            <button onclick="changePage(1)"
+                                class="px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-lg transition">Next
+                                Page</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative">
+                        <h3 class="text-base font-extrabold text-slate-800 tracking-tight mb-4">TB Screening &
+                            Enrollment Trends</h3>
+                        <div class="h-64 relative"><canvas id="companyFactsChart"></canvas></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative">
+                        <h3 class="text-base font-extrabold text-slate-800 tracking-tight mb-4">District DOTS Center
+                            Ratios</h3>
+                        <div class="h-64 relative flex items-center justify-center"><canvas
+                                id="familyDistributorDonutChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- CONTESTATION VIEW / SUBMISSION MODAL -->
+    <div id="contestationModal"
+        class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden">
+            <!-- Modal Header -->
+            <div class="bg-teal-700 text-white px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center">
+                        <i class="fa-solid fa-file-signature text-teal-200"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-extrabold uppercase tracking-wider">Tuberculosis Program Contestation
+                        </h3>
+                        <p class="text-[11px] text-teal-100">TB DOTS & Consumables Verification Log</p>
+                    </div>
+                </div>
+                <button onclick="closeContestationModal()"
+                    class="text-teal-200 hover:text-white p-1.5 rounded-lg hover:bg-teal-800 transition">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <form id="contestationForm" onsubmit="saveContestation(event)" class="p-6 space-y-4">
+                <input type="hidden" id="modalRowIndex">
+
+                <!-- Pre-filled Facility Details -->
+                <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase text-slate-400 block">Facility Code</span>
+                        <span id="modalFacilityCode" class="font-mono font-bold text-slate-800">-</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold uppercase text-slate-400 block">Region / District</span>
+                        <span id="modalRegionDistrict" class="font-bold text-slate-800">-</span>
+                    </div>
+                    <div class="col-span-2">
+                        <span class="text-[10px] font-bold uppercase text-slate-400 block">Facility Name</span>
+                        <span id="modalFacilityName" class="font-extrabold text-teal-900">-</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold uppercase text-slate-400 block">W.Status</span>
+                        <span id="modalWStatus" class="font-bold text-slate-700">-</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold uppercase text-slate-400 block">Visit Date</span>
+                        <span id="modalVisitDate" class="font-bold text-slate-700">-</span>
+                    </div>
+                </div>
+
+                <!-- Dynamic Form Dropdowns -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Sub-Section</label>
+                        <select id="subSectionSelect" onchange="updateIndicatorOptions()"
+                            class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500">
+                            <option value="">Select Sub-Section</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Indicator</label>
+                        <select id="indicatorSelect" disabled
+                            class="w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <option value="">Select Indicator</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Contestation Fields -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Contestation Category / Reason</label>
+                    <select id="modalReasonCategory" required
+                        class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        <option value="">-- Select Reason --</option>
+                        <option value="Stock Indent Submitted / In Transit">Stock Indent Submitted / In Transit</option>
+
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Detailed Justification / Remarks</label>
+                    <textarea id="modalRemarks" rows="3" required
+                        placeholder="Enter official justification, indent voucher reference, or TB program remarks..."
+                        class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Submitted By</label>
+                        <input type="text" id="modalSubmittedBy" value="Hamza Rehmani" required
+                            class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Supporting Attachment</label>
+                        <input type="file"
+                            class="w-full text-[11px] text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100">
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <a href="contestation.html"
+                        class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1">
+                        <span>Open Full Contestation Page</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    </a>
+                    <div class="flex items-center space-x-2">
+                        <button type="button" onclick="closeContestationModal()"
+                            class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">Close</button>
+                        <button type="submit"
+                            class="px-4 py-2 rounded-xl text-xs font-bold bg-teal-700 hover:bg-teal-800 text-white shadow transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-check"></i>
+                            <span>Save Contestation</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast"
+        class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl transition-all opacity-0 translate-y-10 z-50 pointer-events-none">
+        <span id="toastMsg">Action executed successfully.</span>
+    </div>
+
+    <script>
+        window.toggleSidebar = function () {
+            document.getElementById('sidebar').classList.toggle('hidden');
+        };
+
+        window.showToast = function (msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none');
+            }, 2500);
+        };
+
+        const formData = {
+            "Tuberculosis Control": {
+                "TB DOTS Supplies": [
+                    "TB DOTS Corner Established",
+                    "Sputum Collection Cups",
+                    "Anti-TB Drugs (Category-I)",
+                    "Anti-TB Drugs (Pediatric)",
+                    "TB Treatment Register Maintained"
+                ]
+            }
+        };
+
+        function populateSubSections() {
+            const subSelect = document.getElementById('subSectionSelect');
+            subSelect.innerHTML = '<option value="">Select Sub-Section</option>';
+
+            const sections = formData["Tuberculosis Control"];
+            for (const subSec in sections) {
+                const opt = document.createElement('option');
+                opt.value = subSec;
+                opt.textContent = subSec;
+                subSelect.appendChild(opt);
+            }
+            document.getElementById('indicatorSelect').innerHTML = '<option value="">Select Indicator</option>';
+            document.getElementById('indicatorSelect').disabled = true;
+        }
+
+        window.updateIndicatorOptions = function () {
+            const subSec = document.getElementById('subSectionSelect').value;
+            const indSelect = document.getElementById('indicatorSelect');
+            indSelect.innerHTML = '<option value="">Select Indicator</option>';
+
+            if (!subSec) {
+                indSelect.disabled = true;
+                indSelect.className = "w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50 disabled:cursor-not-allowed";
+                return;
+            }
+
+            const indicators = formData["Tuberculosis Control"][subSec] || [];
+            indicators.forEach(ind => {
+                const opt = document.createElement('option');
+                opt.value = ind;
+                opt.textContent = ind;
+                indSelect.appendChild(opt);
+            });
+
+            indSelect.disabled = false;
+            indSelect.className = "w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500";
+        };
+
+        const tuberculosisData = [
+            {
+                code: '211049', region: 'Mirpurkhas', district: 'Badin - A', name: "BHU Ali Murad Chandio", wstatus: '(6/6)', transitioned: '-', visitDate: '2026-10-29 12:28:00',
+                corner: '✓', cups: '✗', cat1: '✓', pediatric: '✓', register: '✓',
+                subSection: 'TB DOTS Supplies', indicator: 'Sputum Collection Cups', reason: '', remarks: ''
+            },
+            {
+                code: '212019', region: 'Larkana', district: 'Dadu', name: "BHU Kamal Khan", wstatus: '(24/7)', transitioned: '1', visitDate: '2026-10-26 08:17:00',
+                corner: '✓', cups: '✓', cat1: '✓', pediatric: '✗', register: '✓',
+                subSection: 'TB DOTS Supplies', indicator: 'Anti-TB Drugs (Pediatric)', reason: '', remarks: ''
+            },
+            {
+                code: '213055', region: 'Sukkur', district: 'Ghotki', name: "BHU Mirpur Mathelo", wstatus: '(6/6)', transitioned: '-', visitDate: '2026-10-28 10:15:00',
+                corner: '✗', cups: '✓', cat1: '✓', pediatric: '✓', register: '✗',
+                subSection: 'TB DOTS Supplies', indicator: 'TB DOTS Corner Established', reason: '', remarks: ''
+            }
+        ];
+
+        let currentPage = 1;
+        const pageSize = 5;
+        let currentFilteredData = [];
+
+        function renderTbTable(data) {
+            currentFilteredData = data;
+            const totalPages = Math.ceil(data.length / pageSize) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            const startIdx = (currentPage - 1) * pageSize;
+            const paginatedData = data.slice(startIdx, startIdx + pageSize);
+
+            const tbody = document.getElementById('tb-table-body');
+            document.getElementById('tb-found-count').innerText = data.length.toLocaleString();
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="13" class="p-4 text-center text-slate-400 font-semibold">No records found matching criteria.</td></tr>`;
+                document.getElementById('pageInfoText').innerText = 'Showing 0 records';
+                document.getElementById('pageIndicator').innerText = '1 / 1';
+                document.getElementById('quickPageButtons').innerHTML = '';
+                return;
+            }
+
+            tbody.innerHTML = paginatedData.map((item, localIdx) => {
+                const absoluteIdx = startIdx + localIdx;
+                const getCell = (val) => `<td class="p-2.5 text-center font-bold border-r border-slate-100 ${val.includes('✓') ? 'text-emerald-700 bg-emerald-50' : 'text-rose-600 bg-rose-50'}">${val}</td>`;
+
+                return `
+                <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                    <td class="p-2.5 font-mono text-slate-600 border-r border-slate-100">${item.code}</td>
+                    <td class="p-2.5 text-slate-600 border-r border-slate-100">${item.region}</td>
+                    <td class="p-2.5 text-center font-bold border-r border-slate-100">${item.district}</td>
+                    <td class="p-2.5 text-center font-bold text-slate-900 border-r border-slate-100">${item.name}</td>
+                    <td class="p-2.5 text-center font-semibold text-slate-700 border-r border-slate-100">${item.wstatus}</td>
+                    <td class="p-2.5 text-center border-r border-slate-100">${item.transitioned}</td>
+                    <td class="p-2.5 text-center text-slate-600 border-r border-slate-100">${item.visitDate}</td>
+                    ${getCell(item.corner)}
+                    ${getCell(item.cups)}
+                    ${getCell(item.cat1)}
+                    ${getCell(item.pediatric)}
+                    ${getCell(item.register)}
+                    <td class="p-2.5 text-center">
+                        ${item.reason
+                        ? `<button onclick="openContestationModal(${absoluteIdx})" class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-[10px] transition">
+                                 <i class="fa-solid fa-eye"></i>
+                                 <span class="max-w-[140px] truncate">${item.reason}</span>
+                               </button>`
+                        : `<button onclick="openContestationModal(${absoluteIdx})" class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-teal-100 hover:bg-teal-200 text-teal-900 border border-teal-300 font-bold text-[10px] transition">
+                                 <i class="fa-solid fa-file-signature"></i>
+                                 <span>View / Contest</span>
+                               </button>`
+                    }
+                    </td>
+                </tr>
+            `;
+            }).join('');
+
+            document.getElementById('pageInfoText').innerText = `Showing records ${startIdx + 1} - ${Math.min(startIdx + pageSize, data.length)} of ${data.length}`;
+            document.getElementById('pageIndicator').innerText = `${currentPage} / ${totalPages}`;
+
+            const quickPagesContainer = document.getElementById('quickPageButtons');
+            let quickHtml = '';
+            const maxShow = Math.min(totalPages, 6);
+            for (let i = 1; i <= maxShow; i++) {
+                quickHtml += `<button onclick="goToPage(${i})" class="px-2.5 py-1 text-xs font-bold rounded-lg ${i === currentPage ? 'bg-teal-700 text-white shadow-sm' : 'text-slate-600 hover:bg-white'} transition">${i}</button>`;
+            }
+            quickPagesContainer.innerHTML = quickHtml;
+        }
+
+        window.openContestationModal = function (absoluteIndex) {
+            const item = currentFilteredData[absoluteIndex];
+            if (!item) return;
+
+            document.getElementById('modalRowIndex').value = absoluteIndex;
+            document.getElementById('modalFacilityCode').innerText = item.code;
+            document.getElementById('modalRegionDistrict').innerText = `${item.region} / ${item.district}`;
+            document.getElementById('modalFacilityName').innerText = item.name;
+            document.getElementById('modalWStatus').innerText = item.wstatus;
+            document.getElementById('modalVisitDate').innerText = item.visitDate;
+
+            populateSubSections();
+            document.getElementById('subSectionSelect').value = item.subSection || 'TB DOTS Supplies';
+            updateIndicatorOptions();
+            document.getElementById('indicatorSelect').value = item.indicator || '';
+
+            document.getElementById('modalReasonCategory').value = item.reason || '';
+            document.getElementById('modalRemarks').value = item.remarks || '';
+
+            const modal = document.getElementById('contestationModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        };
+
+        window.closeContestationModal = function () {
+            const modal = document.getElementById('contestationModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        };
+
+        window.saveContestation = function (event) {
+            event.preventDefault();
+            const idx = parseInt(document.getElementById('modalRowIndex').value, 10);
+            const subSec = document.getElementById('subSectionSelect').value;
+            const ind = document.getElementById('indicatorSelect').value;
+            const reason = document.getElementById('modalReasonCategory').value;
+            const remarks = document.getElementById('modalRemarks').value;
+
+            if (currentFilteredData[idx]) {
+                currentFilteredData[idx].subSection = subSec;
+                currentFilteredData[idx].indicator = ind;
+                currentFilteredData[idx].reason = reason;
+                currentFilteredData[idx].remarks = remarks;
+            }
+
+            renderTbTable(currentFilteredData);
+            closeContestationModal();
+            showToast('Tuberculosis program contestation saved successfully.');
+        };
+
+        window.goToPage = function (page) {
+            currentPage = page;
+            renderTbTable(currentFilteredData);
+            document.getElementById('tableScrollContainer').scrollTop = 0;
+        };
+
+        window.changePage = function (direction) {
+            const totalPages = Math.ceil(currentFilteredData.length / pageSize) || 1;
+            const newPage = currentPage + direction;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                renderTbTable(currentFilteredData);
+                document.getElementById('tableScrollContainer').scrollTop = 0;
+            }
+        };
+
+        window.filterTbTable = function () {
+            currentPage = 1;
+            const query = document.getElementById('tbTableSearch').value.toLowerCase().trim();
+            const filtered = tuberculosisData.filter(item => {
+                return Object.values(item).some(val => String(val).toLowerCase().includes(query));
+            });
+            renderTbTable(filtered);
+        };
+
+        window.exportToCSV = function () {
+            if (!currentFilteredData || currentFilteredData.length === 0) {
+                showToast("No data available to export.");
+                return;
+            }
+            const headers = Object.keys(currentFilteredData[0]).join(",");
+            const rows = currentFilteredData.map(row =>
+                Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(",")
+            );
+            const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `PPHI_Tuberculosis_Export.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Exported tuberculosis table to CSV file.");
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderTbTable(tuberculosisData);
+
+            new Chart(document.getElementById('companyFactsChart'), {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [
+                        { label: 'Badin', data: [30, 90, 150, 180, 210, 260], borderColor: '#0f766e', backgroundColor: 'rgba(15, 118, 110, 0.1)', fill: true, tension: 0.3 },
+                        { label: 'Hyderabad', data: [110, 95, 130, 160, 190, 220], borderColor: '#059669', backgroundColor: 'rgba(5, 150, 105, 0.1)', fill: true, tension: 0.3 },
+                        { label: 'Khairpur', data: [45, 120, 140, 210, 240, 290], borderColor: '#d97706', backgroundColor: 'rgba(217, 119, 6, 0.1)', fill: true, tension: 0.3 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            new Chart(document.getElementById('familyDistributorDonutChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Badin', 'Ghotki', 'Sukkur', 'Khairpur'],
+                    datasets: [{ data: [30, 25, 30, 15], backgroundColor: ['#0f766e', '#14b8a6', '#2dd4bf', '#ccfbf1'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-100">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PPHI Sindh - Family Planning Analytics Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+tailwind.config = { theme: { extend: {
+  fontFamily: { sans: ['Inter', 'sans-serif'] },
+  colors: { pphi: { 50:'#f0fdf4', 100:'#dcfce7', 500:'#10b981', 600:'#059669', 700:'#047857', 800:'#065f46', 900:'#0B5B3B' } }
+} } }
+</script>
+<style>
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#f1f5f9}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+.module-card{transition:all .25s cubic-bezier(.4,0,.2,1)}
+.module-card:hover{transform:translateY(-4px);box-shadow:0 12px 20px -5px rgba(0,0,0,.15)}
+
+/* ===== FROZEN (STICKY) COLUMNS ===== */
+#dynamicTable{border-collapse:separate;border-spacing:0}
+#dynamicTable tbody td{border-bottom:1px solid #f1f5f9}
+.freeze{position:sticky;background:#fff;z-index:5;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box}
+thead .freeze{background:#0f4c47;z-index:20}
+/* Order: Code, Region, District, W.Status, Facility Name, Transitioned, Visit date */
+.f1{left:0;min-width:100px;max-width:100px;width:100px}
+.f2{left:100px;min-width:100px;max-width:100px;width:100px}
+.f3{left:200px;min-width:110px;max-width:110px;width:110px}
+.f4{left:310px;min-width:80px;max-width:80px;width:80px}
+.f5{left:390px;min-width:220px;max-width:220px;width:220px}
+.f6{left:610px;min-width:100px;max-width:100px;width:100px}
+.f7{left:710px;min-width:150px;max-width:150px;width:150px;box-shadow:4px 0 6px -2px rgba(0,0,0,.18)}
+#dynamicTable tbody tr:hover td.freeze{background:#f8fafc}
+</style>
+</head>
+<body class="font-sans antialiased text-slate-800 bg-slate-100 min-h-screen flex flex-col">
+
+<!-- HEADER -->
+<header class="bg-pphi-900 text-white sticky top-0 z-40 shadow-md">
+  <div class="px-4 sm:px-6 py-2.5 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <button onclick="toggleSidebar()" class="p-2 rounded-lg text-emerald-200 hover:text-white hover:bg-pphi-800 focus:outline-none transition md:hidden"><i class="fa-solid fa-bars text-lg"></i></button>
+      <a href="index.html" class="flex items-center space-x-3 cursor-pointer">
+       <div class="w-9 h-9 rounded-full bg-white p-1 flex items-center justify-center shadow-md overflow-hidden">
+  <img src="logo.png" alt="PPHI Sindh Logo" class="w-full h-full object-contain" />
+</div>
+        <div>
+          <h1 class="font-extrabold text-base tracking-tight text-white leading-none">PPHI SINDH</h1>
+          <span class="text-[10px] text-emerald-200 uppercase tracking-widest font-semibold">Primary Healthcare </span>
+        </div>
+      </a>
+    </div>
+    <div class="hidden md:flex items-center flex-1 max-w-sm mx-6">
+      <div class="relative w-full">
+        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-emerald-300"><i class="fa-solid fa-magnifying-glass text-xs"></i></span>
+        <input type="text" placeholder="Search facilities, district, staff..." class="w-full pl-9 pr-4 py-1.5 rounded-xl bg-pphi-800 text-xs text-white placeholder-emerald-300/70 focus:outline-none focus:ring-2 focus:ring-emerald-400 border border-pphi-700">
+      </div>
+    </div>
+    <div class="flex items-center space-x-3">
+      <a href="contestation.html" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow"><i class="fa-solid fa-file-signature"></i><span>Compliance Desk</span></a>
+      <div class="relative">
+        <button onclick="showToast('No new notifications')" class="p-2 text-emerald-200 hover:text-white rounded-xl hover:bg-pphi-800 transition">
+          <i class="fa-regular fa-bell text-base"></i>
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
+        </button>
+      </div>
+      <div class="flex items-center space-x-2 border-l border-pphi-800 pl-3">
+        <div class="w-8 h-8 rounded-full bg-emerald-300 text-pphi-900 font-extrabold flex items-center justify-center text-xs shadow-sm">HR</div>
+        <span class="hidden lg:inline-block text-xs font-bold text-white">Hamza Rehmani</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="flex-1 flex overflow-hidden">
+
+<!-- SIDEBAR -->
+<aside id="sidebar" class="w-56 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 transition-all duration-300 z-30">
+  <div class="py-4 px-3 space-y-1 overflow-y-auto">
+    <a href="index.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition"><i class="fa-solid fa-table-cells-large w-6 text-center"></i><span>Dashboard</span></a>
+    <a href="HFopen.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition"><i class="fa-solid fa-hospital w-6 text-center text-slate-400"></i><span>HF OPEN</span></a>
+    <a href="mowmo.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition"><i class="fa-solid fa-user-doctor w-6 text-center text-slate-400"></i><span>MO/WMO</span></a>
+    <a href="labour.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition"><i class="fa-solid fa-bed-pulse w-6 text-center text-slate-400"></i><span>LABOUR ROOM</span></a>
+    <a href="medicine.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition"><i class="fa-solid fa-pills w-6 text-center text-slate-400"></i><span>MEDICINE</span></a>
+    <a href="ancpnc.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition"><i class="fa-solid fa-stethoscope w-6 text-center text-slate-400"></i><span>ANC/PNC</span></a>
+    <a href="family.html" class="w-full flex items-center px-3 py-2.5 text-xs font-bold bg-pink-50 text-pink-900 border-l-4 border-pink-600 shadow-sm rounded-xl transition"><i class="fa-solid fa-people-roof w-6 text-center text-pink-600"></i><span>FAMILY PLANNING</span></a>
+    <a href="tuberculosis.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition"><i class="fa-solid fa-lungs w-6 text-center text-slate-400"></i><span>TUBERCULOSIS</span></a>
+    <a href="otp.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition"><i class="fa-solid fa-child-reaching w-6 text-center text-slate-400"></i><span>OTP</span></a>
+    <a href="contestation.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition"><i class="fa-solid fa-file-pen w-6 text-center text-slate-400"></i><span>CONTESTATION</span></a>
+    <a href="Complain.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition"><i class="fa-solid fa-shield-halved w-6 text-center text-slate-400"></i><span>COMPLIANCE</span></a>
+    <a href="upload.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition"><i class="fa-solid fa-cloud-arrow-up w-6 text-center text-slate-400"></i><span>DATA UPLOAD</span></a>
+  </div>
+  <div class="p-4 border-t border-slate-100 text-center">
+    <div class="w-12 h-12 mx-auto mb-2">
+      <svg viewBox="0 0 100 100" class="w-full h-full text-pphi-900 fill-current">
+        <circle cx="50" cy="50" r="45" fill="none" stroke="#0B5B3B" stroke-width="8"/>
+        <path d="M50 15 A35 35 0 0 1 85 50 Z" fill="#dc2626"/>
+        <path d="M50 25 A25 25 0 1 0 75 50" fill="none" stroke="#0B5B3B" stroke-width="6"/>
+        <circle cx="50" cy="50" r="10" fill="#0B5B3B"/>
+      </svg>
+    </div>
+    <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Redefining Primary Healthcare</p>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+
+  <!-- BANNER -->
+  <div class="bg-gradient-to-r from-pink-700 to-pink-500 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <h2 class="text-2xl sm:text-3xl font-black tracking-tight mt-1">FAMILY PLANNING & CONTRACEPTIVES</h2>
+      <p class="text-sm sm:text-base font-semibold text-pink-50 tracking-wide">PPHI Sindh Healthcare Network</p>
+    </div>
+    <button onclick="exportToCSV()" class="self-start sm:self-center px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-xs font-bold text-white transition flex items-center space-x-2"><i class="fa-solid fa-download"></i><span>Export Reports</span></button>
+  </div>
+
+  <!-- MODULE CARDS -->
+  <div class="overflow-x-auto pb-3">
+    <div class="flex items-center space-x-3.5 min-w-max">
+      <a href="HFopen.html" class="module-card w-40 h-32 bg-rose-500 hover:bg-rose-600 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+        <div class="flex items-center justify-between">
+          <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-hospital text-sm"></i></div>
+          <span class="text-[10px] font-extrabold bg-rose-700/50 px-2 py-0.5 rounded-full tracking-wider">96.7%</span>
+        </div>
+        <div>
+          <span class="block text-[11px] font-black uppercase tracking-tight truncate">Health Facility</span>
+          <span class="block text-[10px] font-bold text-rose-100">1,341 / 46 <span class="text-[9px] font-normal opacity-80">(Open/Cls)</span></span>
+        </div>
+        <div class="pt-1 border-t border-rose-400/30 flex items-center justify-between text-[10px] font-bold">
+          <span>Total Assessed</span>
+          <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">1,387</span>
+        </div>
+      </a>
+      <a href="mowmo.html" class="module-card w-40 h-32 bg-emerald-600 hover:bg-emerald-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+        <div class="flex items-center justify-between">
+          <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-user-doctor text-sm"></i></div>
+          <span class="text-[10px] font-extrabold bg-emerald-800/50 px-2 py-0.5 rounded-full tracking-wider">82.1%</span>
+        </div>
+        <div>
+          <span class="block text-[11px] font-black uppercase tracking-tight truncate">MO / WMO</span>
+          <span class="block text-[10px] font-bold text-emerald-100">532 / 116 <span class="text-[9px] font-normal opacity-80">(Prs/Abs)</span></span>
+        </div>
+        <div class="pt-1 border-t border-emerald-500/30 flex items-center justify-between text-[10px] font-bold">
+          <span>Total Assessed</span>
+          <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">648</span>
+        </div>
+      </a>
+      <a href="labour.html" class="module-card w-40 h-32 bg-sky-500 hover:bg-sky-600 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+        <div class="flex items-center justify-between">
+          <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-bed-pulse text-sm"></i></div>
+          <span class="text-[10px] font-extrabold bg-sky-700/50 px-2 py-0.5 rounded-full tracking-wider">68.8%</span>
+        </div>
+        <div>
+          <span class="block text-[11px] font-black uppercase tracking-tight truncate">Labour Room</span>
+          <span class="block text-[10px] font-bold text-sky-100">463 / 210 <span class="text-[9px] font-normal opacity-80">(Fn/Non)</span></span>
+        </div>
+        <div class="pt-1 border-t border-sky-400/30 flex items-center justify-between text-[10px] font-bold">
+          <span>Total Assessed</span>
+          <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">673</span>
+        </div>
+      </a>
+      <a href="medicine.html" class="module-card w-40 h-32 bg-amber-600 hover:bg-amber-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+        <div class="flex items-center justify-between">
+          <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-pills text-sm"></i></div>
+          <span class="text-[10px] font-extrabold bg-amber-800/50 px-2 py-0.5 rounded-full tracking-wider">80.9%</span>
+        </div>
+        <div>
+          <span class="block text-[11px] font-black uppercase tracking-tight truncate">Medicine</span>
+          <span class="block text-[10px] font-bold text-amber-100">1,083 / 255 <span class="text-[9px] font-normal opacity-80">(Avl/Not)</span></span>
+        </div>
+        <div class="pt-1 border-t border-amber-500/30 flex items-center justify-between text-[10px] font-bold">
+          <span>Total Assessed</span>
+          <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">1,338</span>
+        </div>
+      </a>
+      <a href="ancpnc.html" class="module-card w-40 h-32 bg-purple-600 hover:bg-purple-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+        <div class="flex items-center justify-between">
+          <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-stethoscope text-sm"></i></div>
+          <span class="text-[10px] font-extrabold bg-purple-800/50 px-2 py-0.5 rounded-full tracking-wider">87.4%</span>
+        </div>
+        <div>
+          <span class="block text-[11px] font-black uppercase tracking-tight truncate">ANC / PNC</span>
+          <span class="block text-[10px] font-bold text-purple-100">588 / 85 <span class="text-[9px] font-normal opacity-80">(Fn/Non)</span></span>
+        </div>
+        <div class="pt-1 border-t border-purple-500/30 flex items-center justify-between text-[10px] font-bold">
+          <span>Total Assessed</span>
+          <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">673</span>
+        </div>
+      </a>
+      <a href="family.html" class="module-card w-40 h-32 bg-pink-500 hover:bg-pink-600 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+        <div class="flex items-center justify-between">
+          <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-people-roof text-sm"></i></div>
+          <span class="text-[10px] font-extrabold bg-pink-700/50 px-2 py-0.5 rounded-full tracking-wider">83.3%</span>
+        </div>
+        <div>
+          <span class="block text-[11px] font-black uppercase tracking-tight truncate">Family Planning</span>
+          <span class="block text-[10px] font-bold text-pink-100">1,116 / 223 <span class="text-[9px] font-normal opacity-80">(Fn/Non)</span></span>
+        </div>
+        <div class="pt-1 border-t border-pink-400/30 flex items-center justify-between text-[10px] font-bold">
+          <span>Total Assessed</span>
+          <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">1,339</span>
+        </div>
+      </a>
+      <a href="tuberculosis.html" class="module-card w-40 h-32 bg-teal-700 hover:bg-teal-800 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+        <div class="flex items-center justify-between">
+          <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-lungs text-sm"></i></div>
+          <span class="text-[10px] font-extrabold bg-teal-900/50 px-2 py-0.5 rounded-full tracking-wider">55.0%</span>
+        </div>
+        <div>
+          <span class="block text-[11px] font-black uppercase tracking-tight truncate">Tuberculosis</span>
+          <span class="block text-[10px] font-bold text-teal-100">77 / 63 <span class="text-[9px] font-normal opacity-80">(Act/Inact)</span></span>
+        </div>
+        <div class="pt-1 border-t border-teal-600/30 flex items-center justify-between text-[10px] font-bold">
+          <span>Total Assessed</span>
+          <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">140</span>
+        </div>
+      </a>
+      <a href="otp.html" class="module-card w-40 h-32 bg-orange-600 hover:bg-orange-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+        <div class="flex items-center justify-between">
+          <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-child-reaching text-sm"></i></div>
+          <span class="text-[10px] font-extrabold bg-orange-800/50 px-2 py-0.5 rounded-full tracking-wider">82.8%</span>
+        </div>
+        <div>
+          <span class="block text-[11px] font-black uppercase tracking-tight truncate">OTP</span>
+          <span class="block text-[10px] font-bold text-orange-100">475 / 99 <span class="text-[9px] font-normal opacity-80">(Fn/Non)</span></span>
+        </div>
+        <div class="pt-1 border-t border-orange-500/30 flex items-center justify-between text-[10px] font-bold">
+          <span>Total Assessed</span>
+          <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">574</span>
+        </div>
+      </a>
+      <a href="contestation.html" class="module-card w-40 h-32 bg-indigo-600 hover:bg-indigo-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+        <div class="flex items-center justify-between">
+          <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-file-signature text-sm"></i></div>
+          <span class="text-[9px] font-extrabold uppercase bg-indigo-800/50 px-2 py-0.5 rounded-full tracking-wider">Desk</span>
+        </div>
+        <div>
+          <span class="block text-[11px] font-black uppercase tracking-tight truncate">Contestation</span>
+          <span class="block text-[10px] font-bold text-indigo-100">Verification Hub</span>
+        </div>
+        <div class="pt-1 border-t border-indigo-500/30 flex items-center justify-between text-[10px] font-bold">
+          <span>Access Desk</span>
+          <i class="fa-solid fa-arrow-right text-[10px]"></i>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="space-y-6">
+    <!-- Tab cards: id must be card-<tabId>, matching tabConfig and datasets -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div id="card-supplies" onclick="switchTab('supplies')" class="bg-pink-500 hover:bg-pink-600 rounded-2xl p-4 text-white text-center cursor-pointer shadow-lg border-4 border-pink-200 transition-all">
+        <div class="w-12 h-12 rounded-full bg-black/10 flex items-center justify-center mx-auto mb-2"><i class="fa-solid fa-capsules text-2xl"></i></div>
+        <h3 class="text-xs font-black uppercase tracking-wider">Contraceptive sufficiency</h3>
+      </div>
+      <div id="card-staff" onclick="switchTab('staff')" class="bg-slate-700 hover:bg-slate-800 rounded-2xl p-4 text-white text-center cursor-pointer shadow-lg border-4 border-transparent transition-all">
+        <div class="w-12 h-12 rounded-full bg-black/10 flex items-center justify-center mx-auto mb-2"><i class="fa-solid fa-user-nurse text-2xl"></i></div>
+        <h3 class="text-xs font-black uppercase tracking-wider">Trained Staff Availability</h3>
+      </div>
+      <div id="card-infra" onclick="switchTab('infra')" class="bg-slate-700 hover:bg-slate-800 rounded-2xl p-4 text-white text-center cursor-pointer shadow-lg border-4 border-transparent transition-all">
+        <div class="w-12 h-12 rounded-full bg-black/10 flex items-center justify-center mx-auto mb-2"><i class="fa-solid fa-building-circle-check text-2xl"></i></div>
+        <h3 class="text-xs font-black uppercase tracking-wider">Infrastructure Availability</h3>
+      </div>
+      <div id="card-kits" onclick="switchTab('kits')" class="bg-slate-700 hover:bg-slate-800 rounded-2xl p-4 text-white text-center cursor-pointer shadow-lg border-4 border-transparent transition-all">
+        <div class="w-12 h-12 rounded-full bg-black/10 flex items-center justify-center mx-auto mb-2"><i class="fa-solid fa-kit-medical text-2xl"></i></div>
+        <h3 class="text-xs font-black uppercase tracking-wider">Family Planning Equipment and Supplies</h3>
+      </div>
+      <div onclick="document.getElementById('tableSearchInput').focus()" class="bg-white hover:bg-slate-50 rounded-2xl p-4 text-slate-800 text-center cursor-pointer shadow-md border border-slate-200 transition-all flex flex-col items-center justify-center">
+        <i class="fa-solid fa-magnifying-glass text-2xl text-slate-700 mb-1"></i>
+        <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-800">Search Records</h3>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <div class="flex items-center space-x-2">
+          <span class="text-sm font-bold text-slate-700">Found Records:</span>
+          <span id="record-count" class="text-sm font-black text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">0</span>
+        </div>
+        <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl border border-slate-200 overflow-x-auto max-w-xs">
+          <span class="text-[11px] font-bold text-slate-500 px-2">Page:</span>
+          <div id="quickPageButtons" class="flex items-center space-x-1"></div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="relative">
+            <input type="text" id="tableSearchInput" oninput="filterTable()" placeholder="Filter records..." class="bg-slate-100 border border-slate-200 text-xs text-slate-600 rounded-xl pl-8 pr-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-500 w-48">
+            <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-xs text-slate-400"></i>
+          </div>
+          <button onclick="exportToCSV()" class="px-4 py-1.5 border border-sky-400 text-sky-600 hover:bg-sky-50 rounded-xl text-xs font-bold transition flex items-center space-x-1.5"><i class="fa-solid fa-download text-xs"></i><span>Export to Excel</span></button>
+        </div>
+      </div>
+
+      <div id="tableScrollContainer" class="overflow-auto border border-slate-200 rounded-xl max-h-[500px]">
+        <table id="dynamicTable" class="w-full text-[11px] text-left whitespace-nowrap">
+          <thead class="sticky top-0 z-10"><tr id="tableHeaderRow" class="bg-[#0f4c47] text-white font-semibold"></tr></thead>
+          <tbody id="family-table-body" class="bg-white"></tbody>
+        </table>
+      </div>
+
+      <div class="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 text-xs">
+        <span id="pageInfoText" class="font-medium text-slate-500">Showing records</span>
+        <div class="flex items-center space-x-2">
+          <button onclick="changePage(-1)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition">Previous</button>
+          <span id="pageIndicator" class="px-3 py-1.5 font-bold text-slate-700">1 / 1</span>
+          <button onclick="changePage(1)" class="px-3 py-1.5 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-lg transition">Next Page</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative">
+        <h3 id="chartTitle1" class="text-base font-extrabold text-slate-800 tracking-tight mb-4">Contraceptive Availability by Commodity</h3>
+        <div class="h-64 relative"><canvas id="familyStatisticalAnalysisChart"></canvas></div>
+      </div>
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative">
+        <h3 id="chartTitle2" class="text-base font-extrabold text-slate-800 tracking-tight mb-4">Stock Status Distribution</h3>
+        <div class="h-64 relative flex items-center justify-center"><canvas id="familyDistributorDonutChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+
+<!-- CONTESTATION MODAL -->
+<div id="contestationModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg max-h-[95vh] overflow-y-auto">
+    <div class="bg-pink-700 text-white px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center"><i class="fa-solid fa-file-signature text-pink-200"></i></div>
+        <h3 class="text-sm font-extrabold uppercase tracking-wider">Family Planning Contestation Form</h3>
+      </div>
+      <button type="button" onclick="closeContestationModal()" class="text-pink-200 hover:text-white p-1.5 rounded-lg hover:bg-pink-800 transition"><i class="fa-solid fa-xmark text-base"></i></button>
+    </div>
+
+    <form id="contestationForm" onsubmit="saveContestation(event)" class="p-6 space-y-4">
+      <input type="hidden" id="modalRowIndex">
+
+      <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs">
+        <div><span class="text-[10px] font-bold uppercase text-slate-400 block">Facility Code</span><span id="modalFacilityCode" class="font-mono font-bold text-slate-800">-</span></div>
+        <div><span class="text-[10px] font-bold uppercase text-slate-400 block">Region / District</span><span id="modalRegionDistrict" class="font-bold text-slate-800">-</span></div>
+        <div class="col-span-2"><span class="text-[10px] font-bold uppercase text-slate-400 block">Facility Name</span><span id="modalFacilityName" class="font-extrabold text-pink-900">-</span></div>
+        <div><span class="text-[10px] font-bold uppercase text-slate-400 block">W.Status</span><span id="modalWStatus" class="font-bold text-slate-700">-</span></div>
+        <div><span class="text-[10px] font-bold uppercase text-slate-400 block">Visit Date</span><span id="modalVisitDate" class="font-bold text-slate-700">-</span></div>
+      </div>
+
+      <!-- Category -> Indicator -> Reason (filled by JS) -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Category</label>
+          <select id="modalCategory" onchange="updateIndicators()" required class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Indicator</label>
+          <select id="modalIndicator" onchange="updateReasons()" required class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-pink-500"></select>
+        </div>
+        <div class="col-span-2">
+          <label class="block text-xs font-bold text-slate-700 mb-1">Reason</label>
+          <select id="modalReason" required class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-pink-500"></select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">Detailed Justification / Remarks</label>
+        <textarea id="modalRemarks" rows="3" required placeholder="Enter official justification, indent voucher reference, or commodity remarks..." class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500"></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Submitted By</label>
+          <input type="text" id="modalSubmittedBy" value="Hamza Rehmani" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-pink-500">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Supporting Attachment</label>
+          <input type="file" class="w-full text-[11px] text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100">
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+        <a href="contestation.html" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1"><span>Open Full Contestation Page</span><i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i></a>
+        <div class="flex items-center space-x-2">
+          <button type="button" onclick="closeContestationModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">Close</button>
+          <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-pink-600 hover:bg-pink-700 text-white shadow transition flex items-center space-x-1.5"><i class="fa-solid fa-check"></i><span>Save Contestation</span></button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl transition-all opacity-0 translate-y-10 z-50 pointer-events-none">
+  <span id="toastMsg">Action executed successfully.</span>
+</div>
+
+<script>
+window.toggleSidebar = function () { document.getElementById('sidebar').classList.toggle('hidden'); };
+
+window.showToast = function (msg) {
+  const toast = document.getElementById('toast');
+  document.getElementById('toastMsg').innerText = msg;
+  toast.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
+  setTimeout(() => toast.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none'), 2500);
+};
+
+/* ---------- Reason lists ---------- */
+const stockReasons =  [ "Available /Functional now ,Not Available/Non functional","Miss Reporting by MMU Monitor","Dilapated Condition","HF under On going R&R in internal PPHI scheme" ,"HF under On going R&R  in 1000 days  scheme" ,"HF under On going R&R in NHSP scheme"   ,"HF Running in alternate Site" ,"Posted now"  ]
+const rrReasons =  [ "Available /Functional now ,Not Available/Non functional","Miss Reporting by MMU Monitor","Dilapated Condition","HF under On going R&R in internal PPHI scheme" ,"HF under On going R&R  in 1000 days  scheme" ,"HF under On going R&R in NHSP scheme"   ,"HF Running in alternate Site" ,"Posted now"  ]
+const staffReasons =  [ "Available /Functional now ,Not Available/Non functional","Miss Reporting by MMU Monitor","Dilapated Condition","HF under On going R&R in internal PPHI scheme" ,"HF under On going R&R  in 1000 days  scheme" ,"HF under On going R&R in NHSP scheme"   ,"HF Running in alternate Site" ,"Posted now"  ]
+const infraReasons =  [ "Available /Functional now ,Not Available/Non functional","Miss Reporting by MMU Monitor","Dilapated Condition","HF under On going R&R in internal PPHI scheme" ,"HF under On going R&R  in 1000 days  scheme" ,"HF under On going R&R in NHSP scheme"   ,"HF Running in alternate Site" ,"Posted now"  ]
+const kitReasons =  [ "Available /Functional now ,Not Available/Non functional","Miss Reporting by MMU Monitor","Dilapated Condition","HF under On going R&R in internal PPHI scheme" ,"HF under On going R&R  in 1000 days  scheme" ,"HF under On going R&R in NHSP scheme"   ,"HF Running in alternate Site" ,"Posted now"  ]
+
+/* ---------- Single source of truth ----------
+   Tab id = key here = card-<id> = key in `datasets`.
+   Add a new tab = add a card in the HTML + an entry here + its data below. */
+const tabConfig = {
+  supplies: {
+    category: 'Contraceptive sufficiency',
+    chart1Title: 'Contraceptive Availability by Commodity',
+    chart2Title: 'Stock Status Distribution',
+    reasons: stockReasons,
+    columns: [
+      { label: 'Rubber condoms', key: 'condoms' },
+      { label: 'POP / COC pills', key: 'pills' },
+      { label: 'ECP', key: 'ecp' },
+      { label: 'Injection - Depo / Sayana', key: 'injection' },
+      { label: 'IUCD', key: 'iucd' },
+      { label: 'Implants', key: 'implants' }
+    ]
+  },
+  staff: {
+    category: 'Trained Staff Availability',
+    chart1Title: 'Trained Staff Availability by Indicator',
+    chart2Title: 'Staff Availability Distribution',
+    reasons: staffReasons,
+    columns: [
+      { label: 'Patient bed', key: 'bed' },
+      { label: 'Sufficient light', key: 'light' },
+    
+    ]
+  },
+  infra: {
+    category: 'Infrastructure Availability',
+    chart1Title: 'Infrastructure Availability by Item',
+    chart2Title: 'Infrastructure Status Distribution',
+    reasons: infraReasons,
+    columns: [
+      { label: '5ml auto disposable syringes present', key: 'syringes' },
+      { label: 'Privacy screen / curtain', key: 'privacy' },
+      { label: 'Examination couch', key: 'couch' },
+      { label: 'Hand-washing facility', key: 'handwash' }
+    ]
+  },
+  kits: {
+    category: 'Family Planning Equipment and Supplies',
+    chart1Title: 'Trained Staff for FP Services',
+    chart2Title: 'Equipment & Supplies Distribution',
+    reasons: kitReasons,
+    columns: [
+      { label: 'Trained staff to administer IUCD present at the time of visit', key: 'iucdStaff' },
+      { label: 'Trained staff to administer Injection Sayana Press present at the time of visit', key: 'sayanaStaff' },
+      { label: 'Trained staff to administer implants present at the time of visit', key: 'implantStaff' }
+    ]
+  }
+};
+
+/* Category -> Indicator -> Reasons, generated from tabConfig */
+const formData = {};
+Object.values(tabConfig).forEach(t => {
+  formData[t.category] = {};
+  t.columns.forEach(c => { formData[t.category][c.label] = t.reasons; });
+});
+
+/* ---------- Modal dropdown helpers ---------- */
+function fillSelect(selectEl, options, selected, placeholder) {
+  selectEl.innerHTML = '';
+  const ph = document.createElement('option');
+  ph.value = '';
+  ph.textContent = placeholder;
+  selectEl.appendChild(ph);
+  options.forEach(o => {
+    const opt = document.createElement('option');
+    opt.value = o;
+    opt.textContent = o;
+    selectEl.appendChild(opt);
+  });
+  if (selected && options.includes(selected)) selectEl.value = selected;
+}
+
+function populateCategories(selected) {
+  fillSelect(document.getElementById('modalCategory'), Object.keys(formData), selected, 'Select Category');
+}
+
+window.updateIndicators = function (selectedInd, selectedReason) {
+  const cat = document.getElementById('modalCategory').value;
+  const inds = cat ? Object.keys(formData[cat] || {}) : [];
+  fillSelect(document.getElementById('modalIndicator'), inds, typeof selectedInd === 'string' ? selectedInd : '', 'Select Indicator');
+  updateReasons(selectedReason);
+};
+
+window.updateReasons = function (selectedReason) {
+  const cat = document.getElementById('modalCategory').value;
+  const ind = document.getElementById('modalIndicator').value;
+  const reasons = (cat && ind && formData[cat] && formData[cat][ind]) ? formData[cat][ind] : [];
+  fillSelect(document.getElementById('modalReason'), reasons, typeof selectedReason === 'string' ? selectedReason : '', 'Select Reason');
+};
+
+/* ---------- Data ---------- */
+const baseFacilities = [
+  { code: '211,049', region: 'Mirpurkhas', district: 'Badin - A', wstatus: '(6/6)', name: 'BHU Ali Murad Chandio', transitioned: '-', visitDate: '29/10/2026 12:28:00' },
+  { code: '212,019', region: 'Larkana', district: 'Dadu', wstatus: '(24/7)', name: 'BHU Kamal Khan', transitioned: '1', visitDate: '26/10/2026 08:17:00' },
+  { code: '213,055', region: 'Sukkur', district: 'Ghotki', wstatus: '(6/6)', name: 'BHU Mirpur Mathelo', transitioned: '-', visitDate: '28/10/2026 10:15:00' },
+  { code: '218,091', region: 'Hyderabad', district: 'Matiari', wstatus: '(24/7)', name: 'BHU Panj Moro', transitioned: '-', visitDate: '10/10/2026 08:05:00' },
+  { code: '216,015', region: 'Hyderabad', district: 'Tando Allahyar', wstatus: '(24/7)', name: 'BHU Piyaro Lund', transitioned: '-', visitDate: '17/10/2026 12:32:00' }
+];
+const buildRows = (tabId, rows) =>
+  baseFacilities.map((f, i) => ({ ...f, ...rows[i], category: tabConfig[tabId].category }));
+
+const familyPlanningData = buildRows('supplies', [
+  { condoms: '✓', pills: '✗', ecp: '✓', injection: '✓', iucd: '✓', implants: '✗ Stock Out', indicator: 'Implants', reason: '', remarks: '' },
+  { condoms: '✓', pills: '✓', ecp: '✓', injection: '✓', iucd: '✗', implants: '✓', indicator: 'IUCD', reason: '', remarks: '' },
+  { condoms: '✗', pills: '✓', ecp: '✓', injection: '✗', iucd: '✓', implants: '✓', indicator: 'Rubber condoms', reason: '', remarks: '' },
+  { condoms: '✓', pills: '✓', ecp: '✗', injection: '✓', iucd: '✓', implants: '✓', indicator: 'ECP', reason: '', remarks: '' },
+  { condoms: '✓', pills: '✓', ecp: '✓', injection: '✗ Stock Out', iucd: '✓', implants: '✓', indicator: '', remarks: '' }
+]);
+
+const staffData = buildRows('staff', [
+  { bed: '✓', light: '✓', counsellor: '✗ Absent', trained: '✓', indicator: 'FP counsellor available', reason: '', remarks: '' },
+  { bed: '✓', light: '✓', counsellor: '✗', trained: '✓', indicator: 'FP counsellor available', reason: '', remarks: '' },
+  { bed: '✗', light: '✗', counsellor: '✗', trained: '✗', indicator: 'Patient bed', reason: '', remarks: '' },
+  { bed: '✓', light: '✓', counsellor: '✓', trained: '✗', indicator: 'Trained in IUCD / Implant', reason: '', remarks: '' },
+  { bed: '✓', light: '✓', counsellor: '✓', trained: '✓', indicator: 'Sufficient light', reason: '', remarks: '' }
+]);
+
+const infraData = buildRows('infra', [
+  { syringes: '✓', privacy: '✓', couch: '✓', handwash: '✓', indicator: 'Hand-washing facility', reason: '', remarks: '' },
+  { syringes: '✓', privacy: '✗ Not available', couch: '✓', handwash: '✗', indicator: 'Privacy screen / curtain', reason: '', remarks: '' },
+  { syringes: '✓', privacy: '✗', couch: '✓', handwash: '✓', indicator: 'Privacy screen / curtain', reason: '', remarks: '' },
+  { syringes: '✓', privacy: '✓', couch: '✗ Needs repair', handwash: '✓', indicator: 'Examination couch', reason: '', remarks: '' },
+  { syringes: '✗', privacy: '✓', couch: '✓', handwash: '✗', indicator: 'Hand-washing facility', reason: '', remarks: '' }
+]);
+
+const kitsData = buildRows('kits', [
+  { iucdStaff: '✓', sayanaStaff: '✓', implantStaff: '✗', indicator: 'Trained staff to administer implants present at the time of visit', reason: '', remarks: '' },
+  { iucdStaff: '✓', sayanaStaff: '✓', implantStaff: '✓', indicator: 'Trained staff to administer IUCD present at the time of visit', reason: '', remarks: '' },
+  { iucdStaff: '✗ Not available', sayanaStaff: '✗ Not available', implantStaff: '✓', indicator: 'Trained staff to administer IUCD present at the time of visit', reason: '', remarks: '' },
+  { iucdStaff: '✓', sayanaStaff: '✗', implantStaff: '✓', indicator: 'Trained staff to administer Injection Sayana Press present at the time of visit', reason: '', remarks: '' },
+  { iucdStaff: '✓', sayanaStaff: '✓', implantStaff: '✓', indicator: 'Trained staff to administer IUCD present at the time of visit', reason: '', remarks: '' }
+]);
+
+const datasets = { supplies: familyPlanningData, staff: staffData, infra: infraData, kits: kitsData };
+
+/* ---------- Table state ---------- */
+let currentTab = 'supplies';
+let currentPage = 1;
+const pageSize = 5;
+let currentFilteredData = [];
+let chartInstance1 = null;
+let chartInstance2 = null;
+
+function getActiveDataset() { return datasets[currentTab] || []; }
+
+const th = 'p-2.5 border-r border-teal-800';
+const thC = th + ' text-center';
+const thPink = thC + ' bg-pink-700';
+const baseHeaders = `
+  <th class="freeze f1 ${th}">Facility Code</th><th class="freeze f2 ${th}">Region</th>
+  <th class="freeze f3 ${thC}">District</th><th class="freeze f4 ${thC}">W.Status</th>
+  <th class="freeze f5 ${thC}">Facility Name</th><th class="freeze f6 ${thC}">Transitioned</th>
+  <th class="freeze f7 ${thC}">Visit date & time</th>`;
+const reasonHeader = `<th class="${thC} bg-amber-700">Contestation</th>`;
+
+function renderTableHeaders() {
+  const cols = tabConfig[currentTab].columns.map(c => `<th class="${thPink}">${c.label}</th>`).join('');
+  document.getElementById('tableHeaderRow').innerHTML = baseHeaders + cols + reasonHeader;
+}
+
+function renderTable(data) {
+  currentFilteredData = data;
+  const totalPages = Math.ceil(data.length / pageSize) || 1;
+  if (currentPage > totalPages) currentPage = totalPages;
+
+  const startIdx = (currentPage - 1) * pageSize;
+  const paginatedData = data.slice(startIdx, startIdx + pageSize);
+  const tbody = document.getElementById('family-table-body');
+  document.getElementById('record-count').innerText = data.length.toLocaleString();
+
+  if (data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="15" class="p-4 text-center text-slate-400 font-semibold">No records found matching criteria.</td></tr>`;
+    document.getElementById('pageInfoText').innerText = 'Showing 0 records';
+    document.getElementById('pageIndicator').innerText = '1 / 1';
+    document.getElementById('quickPageButtons').innerHTML = '';
+    return;
+  }
+
+  const getCell = (val) => {
+    const isPos = String(val).includes('✓');
+    return `<td class="p-2.5 text-center font-bold border-r border-slate-100 ${isPos ? 'text-emerald-700 bg-emerald-50' : 'text-rose-600 bg-rose-50'}">${val}</td>`;
+  };
+
+  const keys = tabConfig[currentTab].columns.map(c => c.key);
+
+  tbody.innerHTML = paginatedData.map((item, localIdx) => {
+    const absoluteIdx = startIdx + localIdx;
+    const middleCells = keys.map(k => getCell(item[k] ?? '-')).join('');
+
+    const actionBtn = item.reason
+      ? `<button onclick="openContestationModal(${absoluteIdx})" class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-[10px] transition"><i class="fa-solid fa-eye"></i><span class="max-w-[140px] truncate">${item.reason}</span></button>`
+      : `<button onclick="openContestationModal(${absoluteIdx})" class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-pink-100 hover:bg-pink-200 text-pink-900 border border-pink-300 font-bold text-[10px] transition"><i class="fa-solid fa-file-signature"></i><span>View / Contest</span></button>`;
+
+    return `
+      <tr class="hover:bg-slate-50 transition">
+        <td class="freeze f1 p-2.5 font-mono text-slate-600 border-r border-slate-100">${item.code}</td>
+        <td class="freeze f2 p-2.5 text-slate-600 border-r border-slate-100">${item.region}</td>
+        <td class="freeze f3 p-2.5 text-center font-bold border-r border-slate-100">${item.district}</td>
+        <td class="freeze f4 p-2.5 text-center font-semibold text-slate-700 border-r border-slate-100">${item.wstatus}</td>
+        <td class="freeze f5 p-2.5 text-center font-extrabold text-slate-900 border-r border-slate-100" title="${item.name}">${item.name}</td>
+        <td class="freeze f6 p-2.5 text-center border-r border-slate-100">${item.transitioned}</td>
+        <td class="freeze f7 p-2.5 text-center text-slate-600 border-r border-slate-100">${item.visitDate}</td>
+        ${middleCells}
+        <td class="p-2.5 text-center">${actionBtn}</td>
+      </tr>`;
+  }).join('');
+
+  document.getElementById('pageInfoText').innerText = `Showing records ${startIdx + 1} - ${Math.min(startIdx + pageSize, data.length)} of ${data.length}`;
+  document.getElementById('pageIndicator').innerText = `${currentPage} / ${totalPages}`;
+
+  let quickHtml = '';
+  for (let i = 1; i <= Math.min(totalPages, 6); i++) {
+    quickHtml += `<button onclick="goToPage(${i})" class="px-2.5 py-1 text-xs font-bold rounded-lg ${i === currentPage ? 'bg-pink-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'} transition">${i}</button>`;
+  }
+  document.getElementById('quickPageButtons').innerHTML = quickHtml;
+}
+
+/* ---------- Modal ---------- */
+window.openContestationModal = function (absoluteIndex) {
+  const item = currentFilteredData[absoluteIndex];
+  if (!item) return;
+
+  document.getElementById('modalRowIndex').value = absoluteIndex;
+  document.getElementById('modalFacilityCode').innerText = item.code;
+  document.getElementById('modalRegionDistrict').innerText = `${item.region} / ${item.district}`;
+  document.getElementById('modalFacilityName').innerText = item.name;
+  document.getElementById('modalWStatus').innerText = item.wstatus;
+  document.getElementById('modalVisitDate').innerText = item.visitDate;
+
+  // Category follows the current tab; indicator & reason cascade from it
+  populateCategories(tabConfig[currentTab].category);
+  updateIndicators(item.indicator, item.reason);
+
+  document.getElementById('modalRemarks').value = item.remarks || '';
+
+  const modal = document.getElementById('contestationModal');
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+};
+
+window.closeContestationModal = function () {
+  const modal = document.getElementById('contestationModal');
+  modal.classList.add('hidden');
+  modal.classList.remove('flex');
+};
+
+window.saveContestation = function (event) {
+  event.preventDefault();
+  const idx = parseInt(document.getElementById('modalRowIndex').value, 10);
+  const row = currentFilteredData[idx];
+  if (row) {
+    row.category = document.getElementById('modalCategory').value;
+    row.indicator = document.getElementById('modalIndicator').value;
+    row.reason = document.getElementById('modalReason').value;
+    row.remarks = document.getElementById('modalRemarks').value;
+  }
+  renderTable(currentFilteredData);
+  closeContestationModal();
+  showToast('Contestation logged successfully.');
+};
+
+/* ---------- Paging / filtering / tabs ---------- */
+window.goToPage = function (page) {
+  currentPage = page;
+  renderTable(currentFilteredData);
+  document.getElementById('tableScrollContainer').scrollTop = 0;
+};
+
+window.changePage = function (direction) {
+  const totalPages = Math.ceil(currentFilteredData.length / pageSize) || 1;
+  const newPage = currentPage + direction;
+  if (newPage >= 1 && newPage <= totalPages) {
+    currentPage = newPage;
+    renderTable(currentFilteredData);
+    document.getElementById('tableScrollContainer').scrollTop = 0;
+  }
+};
+
+window.filterTable = function () {
+  currentPage = 1;
+  const query = document.getElementById('tableSearchInput').value.toLowerCase().trim();
+  renderTable(getActiveDataset().filter(item => Object.values(item).some(val => String(val).toLowerCase().includes(query))));
+};
+
+window.switchTab = function (tabName) {
+  if (!tabConfig[tabName]) return;
+  currentTab = tabName;
+  currentPage = 1;
+  document.getElementById('tableSearchInput').value = '';
+  Object.keys(tabConfig).forEach(t => {
+    const card = document.getElementById(`card-${t}`);
+    if (!card) return;
+    card.className = t === tabName
+      ? "bg-pink-500 hover:bg-pink-600 rounded-2xl p-4 text-white text-center cursor-pointer shadow-lg border-4 border-pink-200 transition-all"
+      : "bg-slate-700 hover:bg-slate-800 rounded-2xl p-4 text-white text-center cursor-pointer shadow-lg border-4 border-transparent transition-all";
+  });
+  renderTableHeaders();
+  renderTable(getActiveDataset());
+  updateCharts();
+};
+
+window.exportToCSV = function () {
+  if (!currentFilteredData || currentFilteredData.length === 0) { showToast("No data available to export."); return; }
+  const headers = Object.keys(currentFilteredData[0]).join(",");
+  const rows = currentFilteredData.map(row => Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(","));
+  const blob = new Blob(["\uFEFF" + [headers, ...rows].join("\n")], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `PPHI_Family_Planning_${currentTab.toUpperCase()}_Export.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast("Exported table to CSV file.");
+};
+
+/* Charts are computed from the table data (✓ = available) */
+function updateCharts() {
+  if (chartInstance1) chartInstance1.destroy();
+  if (chartInstance2) chartInstance2.destroy();
+
+  const cfg = tabConfig[currentTab];
+  const data = getActiveDataset();
+  document.getElementById('chartTitle1').innerText = cfg.chart1Title;
+  document.getElementById('chartTitle2').innerText = cfg.chart2Title;
+
+  const isOk = v => String(v).includes('✓');
+  const pct = cfg.columns.map(c => data.length ? Math.round(data.filter(r => isOk(r[c.key])).length / data.length * 100) : 0);
+  let ok = 0, notOk = 0;
+  data.forEach(r => cfg.columns.forEach(c => isOk(r[c.key]) ? ok++ : notOk++));
+
+  chartInstance1 = new Chart(document.getElementById('familyStatisticalAnalysisChart'), {
+    type: 'bar',
+    data: {
+      labels: cfg.columns.map(c => c.label),
+      datasets: [{ label: 'Availability (%)', data: pct, backgroundColor: '#db2777', borderRadius: 8 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } } }
+  });
+
+  chartInstance2 = new Chart(document.getElementById('familyDistributorDonutChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Available', 'Unavailable / Stock Out'],
+      datasets: [{ data: [ok, notOk], backgroundColor: ['#db2777', '#475569'] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+  });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  renderTableHeaders();
+  renderTable(familyPlanningData);
+  updateCharts();
+});
+</script>
+</body>
+</html>

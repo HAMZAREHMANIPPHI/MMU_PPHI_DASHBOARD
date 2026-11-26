@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-100">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPHI Sindh - ANC/PNC Healthcare Analytics Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        pphi: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#0B5B3B', // Official PPHI Sindh Emerald Green
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .module-card {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .module-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.15);
+        }
+
+        /* ===== FROZEN (STICKY) COLUMNS ===== */
+        #ancTable {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        #ancTable tbody td {
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .freeze {
+            position: sticky;
+            background: #fff;
+            z-index: 5;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-sizing: border-box;
+        }
+
+        thead .freeze {
+            background: #0f4c47;
+            z-index: 20;
+        }
+
+        /* Order: Code, Region, District, W.Status, Facility Name, Transitioned, Visit date */
+        .f1 { left: 0;     min-width: 100px; max-width: 100px; width: 100px; }
+        .f2 { left: 100px; min-width: 100px; max-width: 100px; width: 100px; }
+        .f3 { left: 200px; min-width: 110px; max-width: 110px; width: 110px; }
+        .f4 { left: 310px; min-width: 80px;  max-width: 80px;  width: 80px; }
+        .f5 { left: 390px; min-width: 180px; max-width: 180px; width: 180px; }
+        .f6 { left: 570px; min-width: 100px; max-width: 100px; width: 100px; }
+        .f7 { left: 670px; min-width: 150px; max-width: 150px; width: 150px;
+              box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.18); }
+
+        #ancTable tbody tr:hover td.freeze {
+            background: #f8fafc;
+        }
+    </style>
+</head>
+
+<body class="font-sans antialiased text-slate-800 bg-slate-100 min-h-screen flex flex-col">
+
+    <!-- HEADER TOP BAR -->
+    <header class="bg-pphi-900 text-white sticky top-0 z-40 shadow-md">
+  <div class="px-4 sm:px-6 py-2.5 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <button onclick="toggleSidebar()" class="p-2 rounded-lg text-emerald-200 hover:text-white hover:bg-pphi-800 focus:outline-none transition md:hidden"><i class="fa-solid fa-bars text-lg"></i></button>
+      <a href="index.html" class="flex items-center space-x-3 cursor-pointer">
+       <div class="w-9 h-9 rounded-full bg-white p-1 flex items-center justify-center shadow-md overflow-hidden">
+  <img src="logo.png" alt="PPHI Sindh Logo" class="w-full h-full object-contain" />
+</div>
+        <div>
+          <h1 class="font-extrabold text-base tracking-tight text-white leading-none">PPHI SINDH</h1>
+          <span class="text-[10px] text-emerald-200 uppercase tracking-widest font-semibold">Primary Healthcare </span>
+        </div>
+      </a>
+    </div>
+    <div class="hidden md:flex items-center flex-1 max-w-sm mx-6">
+      <div class="relative w-full">
+        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-emerald-300"><i class="fa-solid fa-magnifying-glass text-xs"></i></span>
+        <input type="text" placeholder="Search facilities, district, staff..." class="w-full pl-9 pr-4 py-1.5 rounded-xl bg-pphi-800 text-xs text-white placeholder-emerald-300/70 focus:outline-none focus:ring-2 focus:ring-emerald-400 border border-pphi-700">
+      </div>
+    </div>
+    <div class="flex items-center space-x-3">
+      <a href="contestation.html" class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow"><i class="fa-solid fa-file-signature"></i><span>Compliance Desk</span></a>
+      <div class="relative">
+        <button onclick="showToast('No new notifications')" class="p-2 text-emerald-200 hover:text-white rounded-xl hover:bg-pphi-800 transition">
+          <i class="fa-regular fa-bell text-base"></i>
+          <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
+        </button>
+      </div>
+      <div class="flex items-center space-x-2 border-l border-pphi-800 pl-3">
+        <div class="w-8 h-8 rounded-full bg-emerald-300 text-pphi-900 font-extrabold flex items-center justify-center text-xs shadow-sm">HR</div>
+        <span class="hidden lg:inline-block text-xs font-bold text-white">Hamza Rehmani</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+    <!-- MAIN BODY CONTAINER -->
+    <div class="flex-1 flex overflow-hidden">
+
+        <!-- LEFT SIDEBAR NAVIGATION -->
+        <aside id="sidebar" class="w-56 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 transition-all duration-300 z-30">
+    <div class="py-4 px-3 space-y-1 overflow-y-auto">
+        <a href="index.html" class="w-full flex items-center px-3 py-2.5 text-xs font-bold bg-emerald-50 text-pphi-900 border-l-4 border-pphi-900 shadow-sm rounded-xl transition">
+            <i class="fa-solid fa-table-cells-large w-6 text-center"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="HFopen.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-hospital w-6 text-center text-slate-400"></i>
+            <span>HF OPEN</span>
+        </a>
+        <a href="mowmo.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-user-doctor w-6 text-center text-slate-400"></i>
+            <span>MO/WMO</span>
+        </a>
+        <a href="labour.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-bed-pulse w-6 text-center text-slate-400"></i>
+            <span>LABOUR ROOM</span>
+        </a>
+        <a href="medicine.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-pills w-6 text-center text-slate-400"></i>
+            <span>MEDICINE</span>
+        </a>
+        <a href="ancpnc.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-stethoscope w-6 text-center text-slate-400"></i>
+            <span>ANC/PNC</span>
+        </a>
+        <a href="family.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-people-roof w-6 text-center text-slate-400"></i>
+            <span>FAMILY PLANNING</span>
+        </a>
+        <a href="tuberculosis.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-lungs w-6 text-center text-slate-400"></i>
+            <span>TUBERCULOSIS</span>
+        </a>
+        <a href="otp.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-child-reaching w-6 text-center text-slate-400"></i>
+            <span>OTP</span>
+        </a>
+        <a href="contestation.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-file-pen w-6 text-center text-slate-400"></i>
+            <span>CONTESTATION</span>
+        </a>
+        <a href="Complain.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-shield-halved w-6 text-center text-slate-400"></i>
+            <span>COMPLIANCE</span>
+        </a>
+        <a href="upload.html" class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+            <i class="fa-solid fa-cloud-arrow-up w-6 text-center text-slate-400"></i>
+            <span>DATA UPLOAD</span>
+        </a>
+    </div>
+
+    <div class="p-4 border-t border-slate-100 text-center">
+        <div class="w-12 h-12 mx-auto mb-2">
+            <svg viewBox="0 0 100 100" class="w-full h-full text-pphi-900 fill-current">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#0B5B3B" stroke-width="8"/> 
+                <path d="M50 15 A35 35 0 0 1 85 50 Z" fill="#dc2626" />
+                <path d="M50 25 A25 25 0 1 0 75 50" fill="none" stroke="#0B5B3B" stroke-width="6"/>
+                <circle cx="50" cy="50" r="10" fill="#0B5B3B"/>
+            </svg>
+        </div>
+        <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Redefining Primary Healthcare</p>
+    </div>
+</aside>
+
+        <!-- RIGHT WORKSPACE AREA -->
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+
+            <!-- WELCOME BANNER -->
+            <div class="bg-gradient-to-r from-purple-800 to-purple-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <span class="text-xs text-purple-100 font-extrabold tracking-widest uppercase">MATERNAL HEALTHCARE ANALYTICS</span>
+                    <h2 class="text-2xl sm:text-3xl font-black tracking-tight mt-1">ANC & PNC MONITORING</h2>
+                    <p class="text-sm sm:text-base font-semibold text-purple-50 tracking-wide">PPHI Sindh Healthcare Network</p>
+                </div>
+                <button onclick="exportToCSV()"
+                    class="self-start sm:self-center px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-xs font-bold text-white transition flex items-center space-x-2">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Export Reports</span>
+                </button>
+            </div>
+
+            <!-- MODULE CARDS -->
+    <div class="overflow-x-auto pb-3">
+    <div class="flex items-center space-x-3.5 min-w-max">
+        <!-- Health Facility (1341 / 1387 = 96.7%) -->
+        <a href="HFopen.html" class="module-card w-40 h-32 bg-rose-500 hover:bg-rose-600 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-hospital text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-rose-700/50 px-2 py-0.5 rounded-full tracking-wider">96.7%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Health Facility</span>
+                <span class="block text-[10px] font-bold text-rose-100">1,341 / 46 <span class="text-[9px] font-normal opacity-80">(Open/Cls)</span></span>
+            </div>
+            <div class="pt-1 border-t border-rose-400/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">1,387</span>
+            </div>
+        </a>
+
+        <!-- MO/WMO (532 / 648 = 82.1%) -->
+        <a href="mowmo.html" class="module-card w-40 h-32 bg-emerald-600 hover:bg-emerald-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-user-doctor text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-emerald-800/50 px-2 py-0.5 rounded-full tracking-wider">82.1%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">MO / WMO</span>
+                <span class="block text-[10px] font-bold text-emerald-100">532 / 116 <span class="text-[9px] font-normal opacity-80">(Prs/Abs)</span></span>
+            </div>
+            <div class="pt-1 border-t border-emerald-500/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">648</span>
+            </div>
+        </a>
+
+        <!-- Labour Room (463 / 673 = 68.8%) -->
+        <a href="labour.html" class="module-card w-40 h-32 bg-sky-500 hover:bg-sky-600 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-bed-pulse text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-sky-700/50 px-2 py-0.5 rounded-full tracking-wider">68.8%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Labour Room</span>
+                <span class="block text-[10px] font-bold text-sky-100">463 / 210 <span class="text-[9px] font-normal opacity-80">(Fn/Non)</span></span>
+            </div>
+            <div class="pt-1 border-t border-sky-400/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">673</span>
+            </div>
+        </a>
+
+        <!-- Medicine (1083 / 1338 = 80.9%) -->
+        <a href="medicine.html" class="module-card w-40 h-32 bg-amber-600 hover:bg-amber-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-pills text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-amber-800/50 px-2 py-0.5 rounded-full tracking-wider">80.9%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Medicine</span>
+                <span class="block text-[10px] font-bold text-amber-100">1,083 / 255 <span class="text-[9px] font-normal opacity-80">(Avl/Not)</span></span>
+            </div>
+            <div class="pt-1 border-t border-amber-500/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">1,338</span>
+            </div>
+        </a>
+
+        <!-- ANC / PNC (588 / 673 = 87.4%) -->
+        <a href="ancpnc.html" class="module-card w-40 h-32 bg-purple-600 hover:bg-purple-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-stethoscope text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-purple-800/50 px-2 py-0.5 rounded-full tracking-wider">87.4%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">ANC / PNC</span>
+                <span class="block text-[10px] font-bold text-purple-100">588 / 85 <span class="text-[9px] font-normal opacity-80">(Fn/Non)</span></span>
+            </div>
+            <div class="pt-1 border-t border-purple-500/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">673</span>
+            </div>
+        </a>
+
+        <!-- Family Planning (1116 / 1339 = 83.3%) -->
+        <a href="family.html" class="module-card w-40 h-32 bg-pink-500 hover:bg-pink-600 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-people-roof text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-pink-700/50 px-2 py-0.5 rounded-full tracking-wider">83.3%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Family Planning</span>
+                <span class="block text-[10px] font-bold text-pink-100">1,116 / 223 <span class="text-[9px] font-normal opacity-80">(Fn/Non)</span></span>
+            </div>
+            <div class="pt-1 border-t border-pink-400/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">1,339</span>
+            </div>
+        </a>
+
+        <!-- Tuberculosis (77 / 140 = 55.0%) -->
+        <a href="tuberculosis.html" class="module-card w-40 h-32 bg-teal-700 hover:bg-teal-800 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-lungs text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-teal-900/50 px-2 py-0.5 rounded-full tracking-wider">55.0%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Tuberculosis</span>
+                <span class="block text-[10px] font-bold text-teal-100">77 / 63 <span class="text-[9px] font-normal opacity-80">(Act/Inact)</span></span>
+            </div>
+            <div class="pt-1 border-t border-teal-600/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">140</span>
+            </div>
+        </a>
+
+        <!-- OTP (475 / 574 = 82.8%) -->
+        <a href="otp.html" class="module-card w-40 h-32 bg-orange-600 hover:bg-orange-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-child-reaching text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-orange-800/50 px-2 py-0.5 rounded-full tracking-wider">82.8%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">OTP</span>
+                <span class="block text-[10px] font-bold text-orange-100">475 / 99 <span class="text-[9px] font-normal opacity-80">(Fn/Non)</span></span>
+            </div>
+            <div class="pt-1 border-t border-orange-500/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">574</span>
+            </div>
+        </a>
+
+        <!-- Contestation Form Desk -->
+        <a href="contestation.html" class="module-card w-40 h-32 bg-indigo-600 hover:bg-indigo-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-file-signature text-sm"></i></div>
+                <span class="text-[9px] font-extrabold uppercase bg-indigo-800/50 px-2 py-0.5 rounded-full tracking-wider">Desk</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Contestation</span>
+                <span class="block text-[10px] font-bold text-indigo-100">Verification Hub</span>
+            </div>
+            <div class="pt-1 border-t border-indigo-500/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Access Desk</span>
+                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </div>
+        </a>
+    </div>
+</div>
+            <div class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div id="card-anc" onclick="toggleAncPncMode('anc')"
+                        class="bg-purple-600 hover:bg-purple-700 rounded-2xl p-6 text-white text-center cursor-pointer shadow-lg transition-all transform hover:-translate-y-1 border-4 border-purple-200">
+                        <div class="w-16 h-16 rounded-full bg-black/10 flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-stethoscope text-3xl"></i></div>
+                        <h3 class="text-2xl font-black uppercase tracking-wider">ANC</h3>
+                    </div>
+
+                    <div onclick="document.getElementById('ancTableSearch').focus()"
+                        class="bg-white hover:bg-slate-50 rounded-2xl p-6 text-slate-800 text-center cursor-pointer shadow-md border border-slate-200 transition-all flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-magnifying-glass text-4xl text-slate-700 mb-3"></i>
+                        <h3 class="text-lg font-extrabold uppercase tracking-wider text-slate-800">FIND PROJECT</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 overflow-hidden">
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm font-bold text-slate-700">Total Assessed:</span>
+                            <span id="anc-found-count" class="text-sm font-black text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">0</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="relative">
+                                <input type="text" id="ancTableSearch" oninput="filterAncPncTable()" placeholder="Search records..." class="bg-slate-100 border border-slate-200 text-xs text-slate-600 rounded-xl pl-8 pr-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 w-48">
+                                <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-xs text-slate-400"></i>
+                            </div>
+                            <button onclick="exportToCSV()" class="px-4 py-1.5 border border-sky-400 text-sky-600 hover:bg-sky-50 rounded-xl text-xs font-bold transition flex items-center space-x-1.5">
+                                <i class="fa-solid fa-download text-xs"></i><span>Export to Excel</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                        <table id="ancTable" class="w-full text-[11px] text-left whitespace-nowrap">
+                            <thead>
+                                <tr class="bg-[#0f4c47] text-white font-semibold">
+                                    <!-- FROZEN COLUMNS (7) -->
+                                    <th class="freeze f1 p-2.5 border-r border-teal-800">Facility Code</th>
+                                    <th class="freeze f2 p-2.5 border-r border-teal-800">Region</th>
+                                    <th class="freeze f3 p-2.5 border-r border-teal-800 text-center">District</th>
+                                    <th class="freeze f4 p-2.5 border-r border-teal-800 text-center">W.Status</th>
+                                    <th class="freeze f5 p-2.5 border-r border-teal-800 text-center">Facility Name</th>
+                                    <th class="freeze f6 p-2.5 border-r border-teal-800 text-center">Transitioned</th>
+                                    <th class="freeze f7 p-2.5 border-r border-teal-800 text-center">Visit date & time</th>
+                                    <!-- SCROLLING COLUMNS -->
+                                    <th class="p-2.5 border-r border-teal-800 text-center">Staff Availability</th>
+                                    <th class="p-2.5 border-r border-teal-800 bg-amber-400 text-slate-900 font-bold text-center">Staff Reason / Contestation</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center">Pregnancy strips</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center">Urine albumin strips</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center">Fetoscope</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center">Adult Weight machine</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center">Baby Weight machine</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center">Glucometer</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center">HB meter</th>
+                                    <th class="p-2.5 border-r border-teal-800 text-center">BP apparatus</th>
+                                    <th class="p-2.5 bg-amber-400 text-slate-900 font-bold text-center">Equipment Reason / Contestation</th>
+                                </tr>
+                            </thead>
+                            <tbody id="anc-table-body" class="bg-white"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative">
+                        <h3 class="text-base font-extrabold text-slate-800 tracking-tight mb-4">ANC/PNC Registration Monthly Trends</h3>
+                        <div class="h-64 relative"><canvas id="ancStatisticalAnalysisChart"></canvas></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm relative">
+                        <h3 class="text-base font-extrabold text-slate-800 tracking-tight mb-4">Care Ratio Distribution</h3>
+                        <div class="h-64 relative flex items-center justify-center"><canvas id="ancDistributorDonutChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- DUAL CONTESTATION MODAL (STAFF REASON & EQUIPMENT REASON) -->
+    <div id="contestationModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden">
+            <!-- Modal Header -->
+            <div id="modalHeaderBar" class="bg-purple-700 text-white px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center">
+                        <i class="fa-solid fa-file-signature text-purple-200"></i>
+                    </div>
+                    <div>
+                        <h3 id="modalTitle" class="text-sm font-extrabold uppercase tracking-wider">ANC Contestation Form</h3>
+                        <p id="modalSubTitle" class="text-[11px] text-purple-100">Maternal Healthcare Verification Log</p>
+                    </div>
+                </div>
+                <button onclick="closeContestationModal()" class="text-purple-200 hover:text-white p-1.5 rounded-lg hover:bg-purple-800 transition">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <form id="contestationForm" onsubmit="saveContestation(event)" class="p-6 space-y-4">
+                <input type="hidden" id="modalRowIndex">
+                <input type="hidden" id="modalFieldType"> <!-- 'staff' or 'equipment' -->
+
+                <!-- Pre-filled Facility Details -->
+                <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase text-slate-400 block">Facility Code</span>
+                        <span id="modalFacilityCode" class="font-mono font-bold text-slate-800">-</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold uppercase text-slate-400 block">Region / District</span>
+                        <span id="modalRegionDistrict" class="font-bold text-slate-800">-</span>
+                    </div>
+                    <div class="col-span-2">
+                        <span class="text-[10px] font-bold uppercase text-slate-400 block">Facility Name</span>
+                        <span id="modalFacilityName" class="font-extrabold text-purple-900">-</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold uppercase text-slate-400 block">W.Status</span>
+                        <span id="modalWStatus" class="font-bold text-slate-700">-</span>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold uppercase text-slate-400 block">Current Status</span>
+                        <span id="modalCurrentStatus" class="inline-block px-2 py-0.5 rounded font-bold text-[11px] mt-0.5">-</span>
+                    </div>
+                </div>
+
+                <!-- Sub-Section & Indicator Dropdowns -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Sub-Section</label>
+                        <select id="subSectionSelect" onchange="updateIndicatorOptions()" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500">
+                            <option value="">Select Sub-Section</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Indicator</label>
+                        <select id="indicatorSelect" disabled class="w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <option value="">Select Indicator</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Contestation Reason Dropdown (Dynamic options based on Staff vs Equipment) -->
+                <div>
+                    <label id="modalReasonLabel" class="block text-xs font-bold text-slate-700 mb-1">Contestation Category / Reason</label>
+                    <select id="modalReasonCategory" required class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500"></select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Detailed Justification / Remarks</label>
+                    <textarea id="modalRemarks" rows="3" required placeholder="Enter official justification, evidence reference, or field remarks..." class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Submitted By</label>
+                        <input type="text" id="modalSubmittedBy" value="Hamza Rehmani" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Supporting Attachment</label>
+                        <input type="file" class="w-full text-[11px] text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[11px] file:font-bold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100">
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <a href="contestation.html" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1">
+                        <span>Open Full Contestation Page</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    </a>
+                    <div class="flex items-center space-x-2">
+                        <button type="button" onclick="closeContestationModal()" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">Close</button>
+                        <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-check"></i>
+                            <span>Save Contestation</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast"
+        class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl transition-all opacity-0 translate-y-10 z-50 pointer-events-none">
+        <span id="toastMsg">Action executed successfully.</span>
+    </div>
+
+    <script>
+        window.toggleSidebar = function () {
+            document.getElementById('sidebar').classList.toggle('hidden');
+        };
+
+        window.showToast = function (msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none');
+            }, 2500);
+        };
+
+        const formData = {
+            "Staff": {
+                "Staff Availability": [
+                    "Not joining due to hard to reach area","Offer latter issued" ,"Not Posted ","Posted now" ,"Posted but on Cluster","Approval Leave","Absent ","DO /MRM ","Present during MMU monitors","Late arrival","Training" ,"Posted but on Cluster"
+                ]
+            },
+            "Equipment": {
+                "ANC Diagnostic & Consumables": [
+                    "Pregnancy strips",
+                    "Urine albumin strips",
+                    "Fetoscope",
+                    "Adult Weight machine",
+                    "Baby Weight machine",
+                    "Glucometer",
+                    "HB meter",
+                    "BP apparatus"
+                ]
+            }
+        };
+
+        function populateSubSections(categoryType) {
+            const subSelect = document.getElementById('subSectionSelect');
+            subSelect.innerHTML = '<option value="">Select Sub-Section</option>';
+            
+            const sections = formData[categoryType] || {};
+            for (const subSec in sections) {
+                const opt = document.createElement('option');
+                opt.value = subSec;
+                opt.textContent = subSec;
+                subSelect.appendChild(opt);
+            }
+            const indSelect = document.getElementById('indicatorSelect');
+            indSelect.innerHTML = '<option value="">Select Indicator</option>';
+            indSelect.disabled = true;
+            indSelect.className = "w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed";
+        }
+
+        window.updateIndicatorOptions = function() {
+            const subSec = document.getElementById('subSectionSelect').value;
+            const indSelect = document.getElementById('indicatorSelect');
+            indSelect.innerHTML = '<option value="">Select Indicator</option>';
+
+            if (!subSec) {
+                indSelect.disabled = true;
+                indSelect.className = "w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed";
+                return;
+            }
+
+            let indicators = [];
+            for (const mainKey in formData) {
+                if (formData[mainKey][subSec]) {
+                    indicators = formData[mainKey][subSec];
+                    break;
+                }
+            }
+
+            indicators.forEach(ind => {
+                const opt = document.createElement('option');
+                opt.value = ind;
+                opt.textContent = ind;
+                indSelect.appendChild(opt);
+            });
+
+            indSelect.disabled = false;
+            indSelect.className = "w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500";
+        };
+
+        const ancData = [
+            { 
+                code: '213,018', region: 'Hyderabad', district: 'Hyderabad', name: "BHU Sehrish Nagar", wstatus: '(24/7)', transitioned: '-', visitDate: '2026-10-22 10:10:00',  
+                staffAvailability: '✓', staffReason: '', staffRemarks: '', staffSubSection: 'Staff Availability', staffIndicator: 'LHV / Midwife Presence',
+                pregnancyStrips: '✓', urineAlbuminStrips: '✗', fetoscope: '✓', adultWeightMachine: '✗', babyWeightMachine: '✗', glucometer: '✗', hbMeter: '✗', bpApparatus: '✓', 
+                equipmentReason: '', equipmentRemarks: '', equipmentSubSection: 'ANC Diagnostic & Consumables', equipmentIndicator: 'Urine albumin strips'
+            },
+            { 
+                code: '213,019', region: 'Hyderabad', district: 'Badin-A', name: "BHU Gulshan", wstatus: '(24/7)', transitioned: '-', visitDate: '2026-10-22 11:15:00',  
+                staffAvailability: '✗', staffReason: '', staffRemarks: '.', staffSubSection: 'Staff Availability', staffIndicator: 'LHV / Midwife Presence',
+                pregnancyStrips: '✓', urineAlbuminStrips: '✓', fetoscope: '✓', adultWeightMachine: '✓', babyWeightMachine: '✓', glucometer: '✓', hbMeter: '✓', bpApparatus: '✓', 
+                equipmentReason: '', equipmentRemarks: '', equipmentSubSection: 'ANC Diagnostic & Consumables', equipmentIndicator: ''
+            },
+            { 
+                code: '213,020', region: 'Karachi', district: 'Malir', name: "BHU Gadap", wstatus: '(24/7)', transitioned: '-', visitDate: '2026-10-22 12:30:00',  
+                staffAvailability: '✓', staffReason: '', staffRemarks: '', staffSubSection: 'Staff Availability', staffIndicator: 'WMO Availability',
+                pregnancyStrips: '✗', urineAlbuminStrips: '✗', fetoscope: '✓', adultWeightMachine: '✗', babyWeightMachine: '✗', glucometer: '✗', hbMeter: '✗', bpApparatus: '✗', 
+                equipmentReason: '', equipmentRemarks: '', equipmentSubSection: 'ANC Diagnostic & Consumables', equipmentIndicator: 'Pregnancy strips'
+            }
+        ];
+
+        let currentFilteredData = [];
+
+        function renderAncPncTable(data) {
+            currentFilteredData = data;
+            const tbody = document.getElementById('anc-table-body');
+            document.getElementById('anc-found-count').innerText = data.length.toLocaleString();
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="18" class="p-4 text-center text-slate-400 font-semibold">No records found matching criteria.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = data.map((item, idx) => {
+                const getCell = (val) => `<td class="p-2.5 text-center font-bold border-r border-slate-100 ${val.includes('✓') ? 'text-emerald-700 bg-emerald-50' : 'text-rose-600 bg-rose-50'}">${val}</td>`;
+
+                return `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="freeze f1 p-2.5 font-mono text-slate-600 border-r border-slate-100">${item.code}</td>
+                    <td class="freeze f2 p-2.5 text-slate-600 border-r border-slate-100">${item.region}</td>
+                    <td class="freeze f3 p-2.5 text-center font-bold border-r border-slate-100">${item.district}</td>
+                    <td class="freeze f4 p-2.5 text-center font-semibold text-slate-700 border-r border-slate-100">${item.wstatus}</td>
+                    <td class="freeze f5 p-2.5 font-bold text-slate-900 border-r border-slate-100">${item.name}</td>
+                    <td class="freeze f6 p-2.5 text-center border-r border-slate-100">${item.transitioned}</td>
+                    <td class="freeze f7 p-2.5 text-center text-slate-600 border-r border-slate-100">${item.visitDate}</td>
+                    ${getCell(item.staffAvailability)}
+                    <td class="p-2.5 text-center bg-amber-50 border-r border-slate-100">
+                        ${item.staffReason 
+                            ? `<button onclick="openContestationModal(${idx}, 'staff')" class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-[10px] transition">
+                                 <i class="fa-solid fa-eye"></i>
+                                 <span class="max-w-[130px] truncate">${item.staffReason}</span>
+                               </button>`
+                            : `<button onclick="openContestationModal(${idx}, 'staff')" class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold text-[10px] transition">
+                                 <i class="fa-solid fa-file-signature"></i>
+                                 <span>Contest Staff</span>
+                               </button>`
+                        }
+                    </td>
+                    ${getCell(item.pregnancyStrips)}
+                    ${getCell(item.urineAlbuminStrips)}
+                    ${getCell(item.fetoscope)}
+                    ${getCell(item.adultWeightMachine)}
+                    ${getCell(item.babyWeightMachine)}
+                    ${getCell(item.glucometer)}
+                    ${getCell(item.hbMeter)}
+                    ${getCell(item.bpApparatus)}
+                    <td class="p-2.5 text-center bg-amber-50">
+                        ${item.equipmentReason 
+                            ? `<button onclick="openContestationModal(${idx}, 'equipment')" class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-[10px] transition">
+                                 <i class="fa-solid fa-eye"></i>
+                                 <span class="max-w-[130px] truncate">${item.equipmentReason}</span>
+                               </button>`
+                            : `<button onclick="openContestationModal(${idx}, 'equipment')" class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold text-[10px] transition">
+                                 <i class="fa-solid fa-file-signature"></i>
+                                 <span>Contest Equip</span>
+                               </button>`
+                        }
+                    </td>
+                </tr>
+            `;}).join('');
+        }
+
+        window.openContestationModal = function(index, fieldType) {
+            const item = currentFilteredData[index];
+            if (!item) return;
+
+            document.getElementById('modalRowIndex').value = index;
+            document.getElementById('modalFieldType').value = fieldType;
+            document.getElementById('modalFacilityCode').innerText = item.code;
+            document.getElementById('modalRegionDistrict').innerText = `${item.region} / ${item.district}`;
+            document.getElementById('modalFacilityName').innerText = item.name;
+            document.getElementById('modalWStatus').innerText = item.wstatus;
+
+            const reasonSelect = document.getElementById('modalReasonCategory');
+            const statusBadge = document.getElementById('modalCurrentStatus');
+
+            if (fieldType === 'staff') {
+                document.getElementById('modalTitle').innerText = 'Staff Availability Contestation Form';
+                document.getElementById('modalSubTitle').innerText = 'ANC/PNC Healthcare Personnel Verification';
+                document.getElementById('modalReasonLabel').innerText = 'Staff Contestation Category / Reason';
+
+                const isAvail = item.staffAvailability.includes('✓');
+                statusBadge.innerText = isAvail ? '✓ Staff Available' : '✗ Staff Unavailable';
+                statusBadge.className = `inline-block px-2 py-0.5 rounded font-bold text-[11px] mt-0.5 ${isAvail ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`;
+
+                populateSubSections('Staff');
+                document.getElementById('subSectionSelect').value = item.staffSubSection || 'Staff Availability';
+                updateIndicatorOptions();
+                document.getElementById('indicatorSelect').value = item.staffIndicator || '';
+
+                reasonSelect.innerHTML = `
+                    <option value="">-- Select Staff Reason --</option>
+                  
+                `;
+                reasonSelect.value = item.staffReason || '';
+                document.getElementById('modalRemarks').value = item.staffRemarks || '';
+
+            } else {
+                document.getElementById('modalTitle').innerText = 'Equipment & Supplies Contestation Form';
+                document.getElementById('modalSubTitle').innerText = 'ANC/PNC Diagnostic & Consumables Verification';
+                document.getElementById('modalReasonLabel').innerText = 'Equipment Contestation Category / Reason';
+
+                statusBadge.innerText = 'ANC Diagnostic Supplies';
+                statusBadge.className = 'inline-block px-2 py-0.5 rounded font-bold text-[11px] mt-0.5 bg-purple-100 text-purple-800';
+
+                populateSubSections('Equipment');
+                document.getElementById('subSectionSelect').value = item.equipmentSubSection || 'ANC Diagnostic & Consumables';
+                updateIndicatorOptions();
+                document.getElementById('indicatorSelect').value = item.equipmentIndicator || '';
+
+                reasonSelect.innerHTML = `
+                    <option value="">-- Select Equipment Reason --</option>
+                    <option value="Stock Indent Submitted">Stock Indent Submitted</option>
+                    
+                `;
+                reasonSelect.value = item.equipmentReason || '';
+                document.getElementById('modalRemarks').value = item.equipmentRemarks || '';
+            }
+
+            const modal = document.getElementById('contestationModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        };
+
+        window.closeContestationModal = function() {
+            const modal = document.getElementById('contestationModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        };
+
+        window.saveContestation = function(event) {
+            event.preventDefault();
+            const idx = parseInt(document.getElementById('modalRowIndex').value, 10);
+            const fieldType = document.getElementById('modalFieldType').value;
+            const subSec = document.getElementById('subSectionSelect').value;
+            const ind = document.getElementById('indicatorSelect').value;
+            const reason = document.getElementById('modalReasonCategory').value;
+            const remarks = document.getElementById('modalRemarks').value;
+
+            if (currentFilteredData[idx]) {
+                if (fieldType === 'staff') {
+                    currentFilteredData[idx].staffSubSection = subSec;
+                    currentFilteredData[idx].staffIndicator = ind;
+                    currentFilteredData[idx].staffReason = reason;
+                    currentFilteredData[idx].staffRemarks = remarks;
+                } else {
+                    currentFilteredData[idx].equipmentSubSection = subSec;
+                    currentFilteredData[idx].equipmentIndicator = ind;
+                    currentFilteredData[idx].equipmentReason = reason;
+                    currentFilteredData[idx].equipmentRemarks = remarks;
+                }
+            }
+
+            renderAncPncTable(currentFilteredData);
+            closeContestationModal();
+            showToast(`${fieldType === 'staff' ? 'Staff' : 'Equipment'} contestation saved successfully.`);
+        };
+
+        window.filterAncPncTable = function() {
+            const query = document.getElementById('ancTableSearch').value.toLowerCase().trim();
+            const filtered = ancData.filter(item => {
+                return Object.values(item).some(val => String(val).toLowerCase().includes(query));
+            });
+            renderAncPncTable(filtered);
+        };
+
+        window.toggleAncPncMode = function(mode) {
+            filterAncPncTable();
+        };
+
+        window.exportToCSV = function() {
+            if (!currentFilteredData || currentFilteredData.length === 0) {
+                showToast("No data available to export.");
+                return;
+            }
+            const headers = Object.keys(currentFilteredData[0]).join(",");
+            const rows = currentFilteredData.map(row => 
+                Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(",")
+            );
+            const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `PPHI_ANCPNC_Export.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Exported ANC/PNC table to CSV file.");
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderAncPncTable(ancData);
+
+            new Chart(document.getElementById('ancStatisticalAnalysisChart'), {
+                type: 'line',
+                data: { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'], datasets: [{ label: 'Registrations', data: [1200, 1400, 1600, 1800, 2100, 2400], borderColor: '#9333ea', backgroundColor: 'rgba(147, 51, 234, 0.1)', fill: true, tension: 0.3 }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            new Chart(document.getElementById('ancDistributorDonutChart'), {
+                type: 'pie',
+                data: { labels: ['Badin', 'Ghotki', 'Sukkur', 'Khairpur'], datasets: [{ data: [40, 30, 20, 10], backgroundColor: ['#9333ea', '#a855f7', '#d8b4fe', '#f3e8ff'] }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        });
+    </script>
+
+</body>
+</html>

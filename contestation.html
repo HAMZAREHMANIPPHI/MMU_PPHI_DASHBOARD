@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-100">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPHI Sindh MMU- Healthcare Analytics Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        pphi: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                            900: '#0B5B3B', // Official PPHI Sindh Emerald Green
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .module-card {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .module-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.15);
+        }
+    </style>
+</head>
+
+<body class="font-sans antialiased text-slate-800 bg-slate-100 min-h-screen flex flex-col">
+
+    <!-- HEADER TOP BAR -->
+    <header class="bg-pphi-900 text-white sticky top-0 z-40 shadow-md">
+        <div class="px-4 sm:px-6 py-2.5 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <button onclick="toggleSidebar()"
+                    class="p-2 rounded-lg text-emerald-200 hover:text-white hover:bg-pphi-800 focus:outline-none transition md:hidden">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                <a href="index.html" class="flex items-center space-x-3 cursor-pointer">
+                    <div class="w-9 h-9 rounded-full bg-white p-1 flex items-center justify-center shadow-md">
+                        <svg viewBox="0 0 100 100" class="w-full h-full text-pphi-900 fill-current">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="#0B5B3B" stroke-width="8" />
+                            <path d="M50 15 A35 35 0 0 1 85 50 Z" fill="#dc2626" />
+                            <path d="M50 25 A25 25 0 1 0 75 50" fill="none" stroke="#0B5B3B" stroke-width="6" />
+                            <circle cx="50" cy="50" r="10" fill="#0B5B3B" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="font-extrabold text-base tracking-tight text-white leading-none">PPHI SINDH</h1>
+                        <span class="text-[10px] text-emerald-200 uppercase tracking-widest font-semibold">Primary
+                            Healthcare Analytics</span>
+                    </div>
+                </a>
+            </div>
+
+            <div class="hidden md:flex items-center flex-1 max-w-sm mx-6">
+                <div class="relative w-full">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-emerald-300">
+                        <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                    </span>
+                    <input type="text" id="globalSearchInput" onkeyup="searchComplaintsTable()"
+                        placeholder="Search facilities, district, ticket ID..."
+                        class="w-full pl-9 pr-4 py-1.5 rounded-xl bg-pphi-800 text-xs text-white placeholder-emerald-300/70 focus:outline-none focus:ring-2 focus:ring-emerald-400 border border-pphi-700">
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <button onclick="openModal()"
+                    class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition shadow">
+                    <i class="fa-solid fa-circle-plus"></i>
+                    <span>Register Complaint</span>
+                </button>
+                <div class="relative">
+                    <button onclick="showToast('3 new complaints flagged for review')"
+                        class="p-2 text-emerald-200 hover:text-white rounded-xl hover:bg-pphi-800 transition">
+                        <i class="fa-regular fa-bell text-base"></i>
+                        <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
+                    </button>
+                </div>
+                <div class="flex items-center space-x-2 border-l border-pphi-800 pl-3">
+                    <div
+                        class="w-8 h-8 rounded-full bg-emerald-300 text-pphi-900 font-extrabold flex items-center justify-center text-xs shadow-sm">
+                        HR
+                    </div>
+                    <span class="hidden lg:inline-block text-xs font-bold text-white">Hamza Rehmani</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN BODY CONTAINER -->
+    <div class="flex-1 flex overflow-hidden">
+
+        <!-- LEFT SIDEBAR NAVIGATION -->
+        <aside id="sidebar"
+            class="w-56 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 transition-all duration-300 z-30">
+            <div class="py-4 px-3 space-y-1 overflow-y-auto">
+                <a href="index.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-bold bg-emerald-50 text-pphi-900 border-l-4 border-pphi-900 shadow-sm rounded-xl transition">
+                    <i class="fa-solid fa-table-cells-large w-6 text-center"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="HFopen.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-hospital w-6 text-center text-slate-400"></i>
+                    <span>HF OPEN</span>
+                </a>
+                <a href="mowmo.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-user-doctor w-6 text-center text-slate-400"></i>
+                    <span>MO/WMO</span>
+                </a>
+                <a href="labour.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-bed-pulse w-6 text-center text-slate-400"></i>
+                    <span>LABOUR ROOM</span>
+                </a>
+                <a href="medicine.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-pills w-6 text-center text-slate-400"></i>
+                    <span>MEDICINE</span>
+                </a>
+                <a href="ancpnc.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-stethoscope w-6 text-center text-slate-400"></i>
+                    <span>ANC/PNC</span>
+                </a>
+                <a href="family.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-people-roof w-6 text-center text-slate-400"></i>
+                    <span>FAMILY PLANNING</span>
+                </a>
+                <a href="tuberculosis.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-lungs w-6 text-center text-slate-400"></i>
+                    <span>TUBERCULOSIS</span>
+                </a>
+                <a href="otp.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-child-reaching w-6 text-center text-slate-400"></i>
+                    <span>OTP</span>
+                </a>
+                <a href="contestation.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-file-pen w-6 text-center text-slate-400"></i>
+                    <span>CONTESTATION</span>
+                </a>
+                <a href="Complain.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-shield-halved w-6 text-center text-slate-400"></i>
+                    <span>COMPLIANCE</span>
+                </a>
+                <a href="upload.html"
+                    class="w-full flex items-center px-3 py-2.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-cloud-arrow-up w-6 text-center text-slate-400"></i>
+                    <span>DATA UPLOAD</span>
+                </a>
+            </div>
+
+            <div class="p-4 border-t border-slate-100 text-center">
+                <div class="w-12 h-12 mx-auto mb-2">
+                    <svg viewBox="0 0 100 100" class="w-full h-full text-pphi-900 fill-current">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#0B5B3B" stroke-width="8" />
+                        <path d="M50 15 A35 35 0 0 1 85 50 Z" fill="#dc2626" />
+                        <path d="M50 25 A25 25 0 1 0 75 50" fill="none" stroke="#0B5B3B" stroke-width="6" />
+                        <circle cx="50" cy="50" r="10" fill="#0B5B3B" />
+                    </svg>
+                </div>
+                <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Redefining Primary
+                    Healthcare</p>
+            </div>
+        </aside>
+
+        <!-- RIGHT WORKSPACE AREA -->
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+
+            <!-- WELCOME BANNER -->
+            <div
+                class="bg-gradient-to-r from-pphi-900 to-emerald-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <span class="text-xs text-emerald-200 font-extrabold tracking-widest uppercase">WELCOME TO THE
+                        DASHBOARD</span>
+                    <h2 class="text-2xl sm:text-3xl font-black tracking-tight mt-1">GOOD MORNING</h2>
+                    <p class="text-xl sm:text-2xl font-black text-emerald-100 tracking-wide">HAMZA REHMANI</p>
+                </div>
+                <button onclick="showToast('Widget added to workspace layout.')"
+                    class="self-start sm:self-center px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-xl text-xs font-bold text-white transition flex items-center space-x-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Add widget</span>
+                </button>
+            </div>
+
+            <!-- MODULE CARDS -->
+           <div class="overflow-x-auto pb-3">
+    <div class="flex items-center space-x-3.5 min-w-max">
+        <!-- Health Facility (1341 / 1387 = 96.7%) -->
+        <a href="HFopen.html" class="module-card w-40 h-32 bg-rose-500 hover:bg-rose-600 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-hospital text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-rose-700/50 px-2 py-0.5 rounded-full tracking-wider">96.7%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Health Facility</span>
+                <span class="block text-[10px] font-bold text-rose-100">1,341 / 46 <span class="text-[9px] font-normal opacity-80">(Open/Cls)</span></span>
+            </div>
+            <div class="pt-1 border-t border-rose-400/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">1,387</span>
+            </div>
+        </a>
+
+        <!-- MO/WMO (532 / 648 = 82.1%) -->
+        <a href="mowmo.html" class="module-card w-40 h-32 bg-emerald-600 hover:bg-emerald-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-user-doctor text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-emerald-800/50 px-2 py-0.5 rounded-full tracking-wider">82.1%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">MO / WMO</span>
+                <span class="block text-[10px] font-bold text-emerald-100">532 / 116 <span class="text-[9px] font-normal opacity-80">(Prs/Abs)</span></span>
+            </div>
+            <div class="pt-1 border-t border-emerald-500/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">648</span>
+            </div>
+        </a>
+
+        <!-- Labour Room (463 / 673 = 68.8%) -->
+        <a href="labour.html" class="module-card w-40 h-32 bg-sky-500 hover:bg-sky-600 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-bed-pulse text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-sky-700/50 px-2 py-0.5 rounded-full tracking-wider">68.8%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Labour Room</span>
+                <span class="block text-[10px] font-bold text-sky-100">463 / 210 <span class="text-[9px] font-normal opacity-80">(Fn/Non)</span></span>
+            </div>
+            <div class="pt-1 border-t border-sky-400/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">673</span>
+            </div>
+        </a>
+
+        <!-- Medicine (1083 / 1338 = 80.9%) -->
+        <a href="medicine.html" class="module-card w-40 h-32 bg-amber-600 hover:bg-amber-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-pills text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-amber-800/50 px-2 py-0.5 rounded-full tracking-wider">80.9%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Medicine</span>
+                <span class="block text-[10px] font-bold text-amber-100">1,083 / 255 <span class="text-[9px] font-normal opacity-80">(Avl/Not)</span></span>
+            </div>
+            <div class="pt-1 border-t border-amber-500/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">1,338</span>
+            </div>
+        </a>
+
+        <!-- ANC / PNC (588 / 673 = 87.4%) -->
+        <a href="ancpnc.html" class="module-card w-40 h-32 bg-purple-600 hover:bg-purple-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-stethoscope text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-purple-800/50 px-2 py-0.5 rounded-full tracking-wider">87.4%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">ANC / PNC</span>
+                <span class="block text-[10px] font-bold text-purple-100">588 / 85 <span class="text-[9px] font-normal opacity-80">(Fn/Non)</span></span>
+            </div>
+            <div class="pt-1 border-t border-purple-500/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">673</span>
+            </div>
+        </a>
+
+        <!-- Family Planning (1116 / 1339 = 83.3%) -->
+        <a href="family.html" class="module-card w-40 h-32 bg-pink-500 hover:bg-pink-600 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-people-roof text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-pink-700/50 px-2 py-0.5 rounded-full tracking-wider">83.3%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Family Planning</span>
+                <span class="block text-[10px] font-bold text-pink-100">1,116 / 223 <span class="text-[9px] font-normal opacity-80">(Fn/Non)</span></span>
+            </div>
+            <div class="pt-1 border-t border-pink-400/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">1,339</span>
+            </div>
+        </a>
+
+        <!-- Tuberculosis (77 / 140 = 55.0%) -->
+        <a href="tuberculosis.html" class="module-card w-40 h-32 bg-teal-700 hover:bg-teal-800 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-lungs text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-teal-900/50 px-2 py-0.5 rounded-full tracking-wider">55.0%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Tuberculosis</span>
+                <span class="block text-[10px] font-bold text-teal-100">77 / 63 <span class="text-[9px] font-normal opacity-80">(Act/Inact)</span></span>
+            </div>
+            <div class="pt-1 border-t border-teal-600/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">140</span>
+            </div>
+        </a>
+
+        <!-- OTP (475 / 574 = 82.8%) -->
+        <a href="otp.html" class="module-card w-40 h-32 bg-orange-600 hover:bg-orange-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-child-reaching text-sm"></i></div>
+                <span class="text-[10px] font-extrabold bg-orange-800/50 px-2 py-0.5 rounded-full tracking-wider">82.8%</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">OTP</span>
+                <span class="block text-[10px] font-bold text-orange-100">475 / 99 <span class="text-[9px] font-normal opacity-80">(Fn/Non)</span></span>
+            </div>
+            <div class="pt-1 border-t border-orange-500/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Total Assessed</span>
+                <span class="bg-white/20 px-1.5 py-0.5 rounded-lg">574</span>
+            </div>
+        </a>
+
+        <!-- Contestation Form Desk -->
+        <a href="contestation.html" class="module-card w-40 h-32 bg-indigo-600 hover:bg-indigo-700 rounded-2xl text-white p-3 flex flex-col justify-between shadow-md transition-all">
+            <div class="flex items-center justify-between">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center"><i class="fa-solid fa-file-signature text-sm"></i></div>
+                <span class="text-[9px] font-extrabold uppercase bg-indigo-800/50 px-2 py-0.5 rounded-full tracking-wider">Desk</span>
+            </div>
+            <div>
+                <span class="block text-[11px] font-black uppercase tracking-tight truncate">Contestation</span>
+                <span class="block text-[10px] font-bold text-indigo-100">Verification Hub</span>
+            </div>
+            <div class="pt-1 border-t border-indigo-500/30 flex items-center justify-between text-[10px] font-bold">
+                <span>Access Desk</span>
+                <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </div>
+        </a>
+    </div>
+</div>
+
+            <div id="view-contestation" class="page-view space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+                    <!-- MAIN FORM: LOCATION FILTERS & CONTESTATION DETAILS -->
+                    <div
+                        class="lg:col-span-2 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-sm space-y-5">
+                        <h2 class="text-xl font-bold text-slate-800 tracking-tight mb-2">Contestation</h2>
+  <!-- Region & District -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Region</label>
+                                <select id="cRegion"
+                                    class="w-full bg-slate-100 border-none rounded-xl px-3 py-2.5 text-xs text-slate-700 font-medium focus:ring-2 focus:ring-emerald-500">
+                                    <option>All</option>
+                                    <option>Sukkur</option>
+                                    <option>Hyderabad</option>
+                                    <option>Larkana</option>
+                                    <option>Mirpurkhas</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">District</label>
+                                <select id="cDistrict"
+                                    class="w-full bg-slate-100 border-none rounded-xl px-3 py-2.5 text-xs text-slate-700 font-medium focus:ring-2 focus:ring-emerald-500">
+                                    <option>All</option>
+                                    <option>Ghotki</option>
+                                    <option>Khairpur</option>
+                                    <option>Shaheed Benazirabad</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Health Facility</label>
+                            <select id="cFacility"
+                                class="w-full bg-slate-100 border-none rounded-xl px-3 py-2.5 text-xs text-slate-700 font-medium focus:ring-2 focus:ring-emerald-500">
+                                <option>All</option>
+                                <option>23L24 BHU Nabad Jatoi</option>
+                                <option>23L04 BHU Dehar</option>
+                                <option>23L09 RHC Ahmedpur</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Date Range Picker Controls -->
+                        <div class="grid grid-cols-1 sm:grid-cols-7 gap-2 items-end">
+                            <div class="sm:col-span-3">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">From Date*</label>
+                                <div class="relative">
+                                    <input type="date" id="start" name="trip-start" value="YYYY-MM-DD" min="2018-01-01"
+                                        max="2030-12-31"
+                                        class="w-full bg-emerald-50/70 border border-emerald-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 pr-8">
+
+                                </div>
+                            </div>
+                            <div class="sm:col-span-1 flex items-center justify-center py-1">
+                                <button type="button"
+                                    class="w-full py-1.5 px-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-[11px] font-bold text-slate-600 flex items-center justify-between border border-slate-200">
+                                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                                    <span>Date range</span>
+                                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                                </button>
+                            </div>
+                            <div class="sm:col-span-3">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">End Date*</label>
+                                <div class="relative">
+                                    <input type="date" id="start" name="trip-start" value="YYYY-MM-DD" min="2018-01-01"
+                                        max="2030-12-31"
+                                        class="w-full bg-emerald-50/70 border border-emerald-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 pr-8">
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <form id="healthForm" class="space-y-4">
+                            <!-- Section Dropdown -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Section</label>
+                                <div class="relative">
+                                    <select id="sectionSelect"
+                                        class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-700 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                        <option value="">Select Section</option>
+                                        <option value="HF">HF</option>
+                                        <option value="MO/WMO">MO/WMO</option>
+                                        <option value="LABOUR ROOM">LABOUR ROOM</option>
+                                        <option value="MEDICINE STOCK">MEDICINE STOCK</option>
+                                        <option value="ANC/PNC">ANC/PNC</option>
+                                        <option value="FAMILY PLANNING">FAMILY PLANNING</option>
+                                    </select>
+                                    <i
+                                        class="fa-solid fa-circle-info absolute right-3 top-3 text-slate-400 text-xs"></i>
+                                </div>
+                                <span id="sectionError" class="text-red-500 text-[10px] hidden">Please select a
+                                    section</span>
+                            </div>
+
+                            <!-- Sub-Section Dropdown -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Sub-Section</label>
+                                <select id="subSectionSelect" disabled
+                                    class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <option value="">Select Sub-Section</option>
+                                </select>
+                                <span id="subSectionError" class="text-red-500 text-[10px] hidden">Please select a
+                                    sub-section</span>
+                            </div>
+
+                            <!-- Indicator Dropdown -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Indicator</label>
+                                <select id="indicatorSelect" disabled
+                                    class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-700 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <option value="">Select Indicator</option>
+                                </select>
+                                <span id="indicatorError" class="text-red-500 text-[10px] hidden">Please select an
+                                    indicator</span>
+                            </div>
+
+
+                        </form>
+
+                        <script>
+                            // Data mapping hierarchy
+                            const formData = {
+                                "HF": {
+                                    "Facility infrastructure": [
+                                        "Road sign",
+                                        "Boundary walls",
+                                        "Bench/chairs",
+                                        "Waiting area",
+                                        "Water cooler",
+                                        "Fans",
+                                        "Electricity presence",
+                                        "Backup electricity",
+                                        "Adequate lighting inside the building",
+                                        "Female patient toilet",
+                                        "Continuous water supply",
+                                        "OBGYN ward",
+                                        "Biometric machine",
+                                        "Blood Bank",
+                                        "Operation theatre",
+                                        "Paediatric ward",
+                                        "Laboratory"
+                                    ],
+                                    "Staff availability": [
+                                        "Doctor presence",
+                                        "Nurse availability",
+                                        "Support staff count"
+                                    ]
+                                },
+                                "MO/WMO": {
+                                    "WO": [
+                                        "Delivery table",
+                                        "Sterilization equipment",
+                                        "Resuscitator kit"
+                                    ],
+                                    "WMO": [
+                                        "Delivery table",
+                                        "Sterilization equipment",
+                                        "Resuscitator kit"
+                                    ]
+                                },
+                                "LABOUR ROOM": {
+                                    "SBAs Availability": [
+                                        "WMO or LHV or midwife or female staff nurse ",
+
+                                    ],
+                                    "Infrastructure": [
+                                        "Continuous water supply",
+                                        "Patient toilet",
+                                        "Electricity presence",
+                                        "Backup electric supply"
+                                    ],
+                                    "Equipments": [
+                                        "Delivery table",
+                                        "Autoclave",
+                                        "Delivery light",
+                                        "BP apparatus",
+                                        "Adult ambu bag",
+                                        "Neonatal ambu bag",
+                                        "Oxygen cylinder",
+                                        "Adult oxygen mask",
+                                        "Neonatal oxygen mask",
+                                        "Cords clamp",
+                                        "Vaginal speculum",
+                                        "Scissor/scalpel",
+                                        "Infant Warmer"
+                                    ],
+                                    "Emergency Tray": [
+                                        "Tablet Misoprostol ",
+                                        "Inj.Oxytocin",
+                                        "Ringerʼs lactate / Normal ",
+                                        "Saline ,Inj.Dexamethasone / Hy",
+                                        "drocortisone ",
+                                        "Inj.Tranexamic acid",
+                                        "Tab.Methyldopa",
+                                        "Disposable syringes",
+                                        "Inj.Haemaccel",
+                                        "Inj.Hydralazine",
+                                        "Inj.Antihistamine",
+                                        "Inj.MagnesiumSulphate",
+                                        "Inj.Adrenaline",
+                                        "Cannula"
+
+                                    ]
+                                },
+                                "MEDICINE STOCK": {
+                                    "Medicine": [
+                                        "Cap. Amoxicillin/Ampicillin",
+                                        "Amoxicillin DT / Syrup Amoxicillin",
+                                        "Tablet Cotrimoxazole/Ofloxacin/Ciprofloxacin/Erythromycin/Doxycycline",
+                                        " 	Syrup Co Trimoxazole/Erythromycin/Clarithromycin",
+                                        "Tablet Metronidazole", "Injection Ampicillin/Amoxicillin/Augmentin/Gentamicin/Ceftriaxone",
+                                        "Tablet Diclofenac/Paracetamol/Ibuprofen/Mefenamic acid	Injection Diclofenac/Paracetamol",
+                                        "Syrup Paracetamol/Ibuprofen/Mefenamic acid	Tablet Chloroquine/Artemether+Lumefantrine",
+                                        "Syrup Salbutamol	Syrup/Tablet Antihelminthic (Albendazole/Mebendazole) ",
+                                        "Syrup/Tablet Antihistamine/Chlorpheniramine maleate ",
+                                        "IV Infusions/Dextrose infusion/Normal saline/Ringer lactate",
+                                        "Injection Dexamethasone/Hydrocortisone",
+                                        "Tablet/Capsule Iron/Folic Acid	",
+                                        "ORS",
+                                        "Tablet Misoprostol ",
+                                        "Injection Magnesium Sulphate",
+                                        "Syrup Zinc / Zinc DT / Zinc Tablets ",
+                                        "Anti-snake Venom (ASV)",
+                                        "Anti-rabies vaccine (ARV)",
+                                        "Medicines assessed"
+
+                                    ]
+                                },
+                                "ANC/PNC": {
+                                    "ANC": [
+                                        "Cap. Amoxicillin/Ampicillin",
+                                        "Amoxicillin DT / Syrup Amoxicillin",
+                                        "Tablet Cotrimoxazole/Ofloxacin/Ciprofloxacin/Erythromycin/Doxycycline",
+                                        " 	Syrup Co Trimoxazole/Erythromycin/Clarithromycin",
+                                        "Tablet Metronidazole", "Injection Ampicillin/Amoxicillin/Augmentin/Gentamicin/Ceftriaxone",
+                                        "Tablet Diclofenac/Paracetamol/Ibuprofen/Mefenamic acid	Injection Diclofenac/Paracetamol",
+                                        "Syrup Paracetamol/Ibuprofen/Mefenamic acid	Tablet Chloroquine/Artemether+Lumefantrine",
+                                        "Syrup Salbutamol	Syrup/Tablet Antihelminthic (Albendazole/Mebendazole) ",
+                                        "Syrup/Tablet Antihistamine/Chlorpheniramine maleate ",
+                                        "IV Infusions/Dextrose infusion/Normal saline/Ringer lactate",
+                                        "Injection Dexamethasone/Hydrocortisone",
+                                        "Tablet/Capsule Iron/Folic Acid	",
+                                        "ORS",
+                                        "Tablet Misoprostol ",
+                                        "Injection Magnesium Sulphate",
+                                        "Syrup Zinc / Zinc DT / Zinc Tablets ",
+                                        "Anti-snake Venom (ASV)",
+                                        "Anti-rabies vaccine (ARV)",
+                                        "Medicines assessed"
+                                    ],
+                                    "PNC": [
+                                        "Cap. Amoxicillin/Ampicillin",
+                                        "Amoxicillin DT / Syrup Amoxicillin",
+                                        "Tablet Cotrimoxazole/Ofloxacin/Ciprofloxacin/Erythromycin/Doxycycline",
+                                        " 	Syrup Co Trimoxazole/Erythromycin/Clarithromycin",
+                                        "Tablet Metronidazole", "Injection Ampicillin/Amoxicillin/Augmentin/Gentamicin/Ceftriaxone",
+                                        "Tablet Diclofenac/Paracetamol/Ibuprofen/Mefenamic acid	Injection Diclofenac/Paracetamol",
+                                        "Syrup Paracetamol/Ibuprofen/Mefenamic acid	Tablet Chloroquine/Artemether+Lumefantrine",
+                                        "Syrup Salbutamol	Syrup/Tablet Antihelminthic (Albendazole/Mebendazole) ",
+                                        "Syrup/Tablet Antihistamine/Chlorpheniramine maleate ",
+                                        "IV Infusions/Dextrose infusion/Normal saline/Ringer lactate",
+                                        "Injection Dexamethasone/Hydrocortisone",
+                                        "Tablet/Capsule Iron/Folic Acid	",
+                                        "ORS",
+                                        "Tablet Misoprostol ",
+                                        "Injection Magnesium Sulphate",
+                                        "Syrup Zinc / Zinc DT / Zinc Tablets ",
+                                        "Anti-snake Venom (ASV)",
+                                        "Anti-rabies vaccine (ARV)",
+                                        "Medicines assessed"
+                                    ]
+
+                                },
+                                "FAMILY PLANNING": {
+                                    "Family planning": [
+                                        "Cap. Amoxicillin/Ampicillin",
+                                        "Amoxicillin DT / Syrup Amoxicillin",
+                                        "Tablet Cotrimoxazole/Ofloxacin/Ciprofloxacin/Erythromycin/Doxycycline",
+                                        " 	Syrup Co Trimoxazole/Erythromycin/Clarithromycin",
+                                        "Tablet Metronidazole", "Injection Ampicillin/Amoxicillin/Augmentin/Gentamicin/Ceftriaxone",
+                                        "Tablet Diclofenac/Paracetamol/Ibuprofen/Mefenamic acid	Injection Diclofenac/Paracetamol",
+                                        "Syrup Paracetamol/Ibuprofen/Mefenamic acid	Tablet Chloroquine/Artemether+Lumefantrine",
+                                        "Syrup Salbutamol	Syrup/Tablet Antihelminthic (Albendazole/Mebendazole) ",
+                                        "Syrup/Tablet Antihistamine/Chlorpheniramine maleate ",
+                                        "IV Infusions/Dextrose infusion/Normal saline/Ringer lactate",
+                                        "Injection Dexamethasone/Hydrocortisone",
+                                        "Tablet/Capsule Iron/Folic Acid	",
+                                        "ORS",
+                                        "Tablet Misoprostol ",
+                                        "Injection Magnesium Sulphate",
+                                        "Syrup Zinc / Zinc DT / Zinc Tablets ",
+                                        "Anti-snake Venom (ASV)",
+                                        "Anti-rabies vaccine (ARV)",
+                                        "Medicines assessed"
+                                    ]
+                                }
+                            };
+
+                            const sectionSelect = document.getElementById('sectionSelect');
+                            const subSectionSelect = document.getElementById('subSectionSelect');
+                            const indicatorSelect = document.getElementById('indicatorSelect');
+                            const healthForm = document.getElementById('healthForm');
+
+                            // Handle Section Change
+                            sectionSelect.addEventListener('change', function () {
+                                const selectedSection = this.value;
+
+                                // Reset and clear lower level dropdowns
+                                subSectionSelect.innerHTML = '<option value="">Select Sub-Section</option>';
+                                indicatorSelect.innerHTML = '<option value="">Select Indicator</option>';
+                                indicatorSelect.disabled = true;
+
+                                if (selectedSection && formData[selectedSection]) {
+                                    subSectionSelect.disabled = false;
+                                    Object.keys(formData[selectedSection]).forEach(subSection => {
+                                        const option = document.createElement('option');
+                                        option.value = subSection;
+                                        option.textContent = subSection;
+                                        subSectionSelect.appendChild(option);
+                                    });
+                                } else {
+                                    subSectionSelect.disabled = true;
+                                }
+                            });
+
+                            // Handle Sub-Section Change
+                            subSectionSelect.addEventListener('change', function () {
+                                const selectedSection = sectionSelect.value;
+                                const selectedSubSection = this.value;
+
+                                indicatorSelect.innerHTML = '<option value="">Select Indicator</option>';
+
+                                if (selectedSection && selectedSubSection && formData[selectedSection][selectedSubSection]) {
+                                    indicatorSelect.disabled = false;
+                                    formData[selectedSection][selectedSubSection].forEach(indicator => {
+                                        const option = document.createElement('option');
+                                        option.value = indicator;
+                                        option.textContent = indicator;
+                                        indicatorSelect.appendChild(option);
+                                    });
+                                } else {
+                                    indicatorSelect.disabled = true;
+                                }
+                            });
+
+                            // Form Validation on Submit
+                            healthForm.addEventListener('submit', function (e) {
+                                e.preventDefault();
+                                let isValid = true;
+
+                                if (!sectionSelect.value) {
+                                    document.getElementById('sectionError').classList.remove('hidden');
+                                    isValid = false;
+                                } else {
+                                    document.getElementById('sectionError').classList.add('hidden');
+                                }
+
+                                if (!subSectionSelect.value) {
+                                    document.getElementById('subSectionError').classList.remove('hidden');
+                                    isValid = false;
+                                } else {
+                                    document.getElementById('subSectionError').classList.add('hidden');
+                                }
+
+                                if (!indicatorSelect.value) {
+                                    document.getElementById('indicatorError').classList.remove('hidden');
+                                    isValid = false;
+                                } else {
+                                    document.getElementById('indicatorError').classList.add('hidden');
+                                }
+
+                                if (isValid) {
+                                    alert('Form submitted successfully!');
+                                }
+                            });
+                        </script>
+
+
+                        <!-- Contestation / Compliance Dropdown -->
+                        <div>
+
+                            <select
+                                class="w-full bg-slate-100 border-none rounded-xl px-3 py-2.5 text-xs text-slate-600 font-semibold focus:ring-2 focus:ring-emerald-500">
+                                <option> COMPLIANCE</option>
+                            </select>
+                        </div>
+
+                        <!-- Upload Additional File Field -->
+                        <div class="space-y-1">
+                            <div onclick="document.getElementById('file-input-main').click()"
+                                class="border-2 border-dashed border-slate-300 rounded-2xl p-4 text-center hover:border-emerald-500 hover:bg-emerald-50/30 transition cursor-pointer flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-upload text-slate-500 text-sm"></i>
+                                <span class="text-xs font-semibold text-slate-600">Upload Additional file</span>
+                                <input type="file" id="file-input-main" class="hidden"
+                                    onchange="handleFileSelect(this, 'main-file-status')">
+                            </div>
+                            <p id="main-file-status" class="text-[11px] text-slate-400">Attach file. File size of your
+                                documents should not exceed 10MB</p>
+                        </div>
+
+                        <!-- Rich Text Comment Editor Block -->
+                        <div class="border border-slate-300 rounded-2xl overflow-hidden bg-white shadow-sm">
+                            <!-- Formatting Bar -->
+                            <div
+                                class="bg-slate-50 border-b border-slate-200 px-3 py-2 flex items-center space-x-4 text-slate-600 text-sm">
+                                <button type="button" onclick="formatText('bold')"
+                                    class="hover:text-slate-900 font-bold px-1">B</button>
+                                <button type="button" onclick="formatText('italic')"
+                                    class="hover:text-slate-900 italic px-1">I</button>
+                                <button type="button" onclick="formatText('underline')"
+                                    class="hover:text-slate-900 underline px-1">U</button>
+                                <span class="text-slate-300">|</span>
+                                <button type="button" class="hover:text-slate-900 font-mono text-xs"><i
+                                        class="fa-solid fa-code"></i></button>
+                                <button type="button" class="hover:text-slate-900"><i
+                                        class="fa-solid fa-list-ul"></i></button>
+                                <button type="button" class="hover:text-slate-900"><i
+                                        class="fa-solid fa-list-ol"></i></button>
+                            </div>
+                            <!-- Textarea Content -->
+                            <textarea id="commentText" rows="4"
+                                class="w-full p-3 text-xs text-slate-700 focus:outline-none placeholder-slate-400 resize-none"
+                                placeholder="Comments / Reason"></textarea>
+                        </div>
+
+                        <!-- Checkbox NDA -->
+                        <div class="flex items-center space-x-2 pt-1">
+                            <input type="checkbox" id="nda-check"
+                                class="w-4 h-4 rounded text-sky-500 focus:ring-sky-400 border-slate-300">
+                            <label for="nda-check" class="text-xs font-semibold text-slate-700">I want to protect my
+                                data by signing an NDA</label>
+                        </div>
+
+                        <!-- Submit CTA Button -->
+                        <button onclick="submitContestation()"
+                            class="w-full py-3.5 bg-sky-500 hover:bg-sky-600 text-white font-extrabold rounded-2xl shadow-md transition text-xs tracking-wider uppercase">
+                            SUBMIT
+                        </button>
+                    </div>
+
+                    <!-- RIGHT SIDEBAR CARDS (INDICATOR & ACTION CARDS) -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast"
+        class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl transition-all opacity-0 translate-y-10 z-50 pointer-events-none">
+        <span id="toastMsg">Action executed successfully.</span>
+    </div>
+
+    <script>
+        window.toggleSidebar = function () {
+            document.getElementById('sidebar').classList.toggle('hidden');
+        };
+
+        window.showToast = function (msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none');
+            }, 2500);
+        };
+
+        window.exportToCSV = function (tbodyId) {
+            showToast("Exporting data to Excel format...");
+        };
+    </script>
+</body>
+
+</html>
